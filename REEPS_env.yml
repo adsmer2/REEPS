@@ -1,4 +1,4 @@
-name: T1
+name: REEPS_env
 channels:
   - defaults
   - conda-forge
