@@ -3,6 +3,7 @@ Rare Earth Element recovery from Phosphogypsum System (REEPS)
 
 The Pennsylvania State University
 Chemical Engineering Department
+S2D2 Lab (Dr. Rui Shi)
 @author: Adam Smerigan
 """
 # %%
@@ -26,15 +27,24 @@ import scipy as scp
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter
 
-# import functions from other files
+# import essential functions from other files
 from _component import *
 from _lca_data import *
 from model import *
 from systems import *
-
 from model_leaching import *
 from bst_TEA_modified import * 
+
+# import the analysis functions from other files
+from analysis_MSP_contributions import *
+from analysis_uncertainty import *
+from analysis_sensitivity import *
+from analysis_indicator_trend import *
+from analysis_optimization_leaching import *
+from analysis_target import *
+from analysis_scenario import *
 
 bw_path = os.path.dirname(__file__)
 data_path = os.path.join(bw_path, 'data')
@@ -63,7 +73,7 @@ os.environ["PATH"] += os.pathsep + r'C:\Users\ajs8911\Miniconda3\envs\bw2\Librar
 # REEcontent = 0.5/100
 # num_ind_REEs = 9
 # report = 'no' # "yes" or "no". Do you want to print results to excel? (saves 1 excel file to 'results' folder)
-# num_samples = 1000
+# num_samples = 400
 # uncertainty = 'no' # "yes" or "no". Do you want to make an kde-box/whisker plot? (saves 1 plot to 'figures' folder)
 # sensitivity = 'no' # "yes" or "no". Do you want to make a bubble senstivity plot and parameter trend plots? (saves several plots to 'figures' folder)
 # parameter = 'technological' # "contextual", "technological" or "all". sensitivity is split between these two types of parameters 
@@ -75,7 +85,7 @@ os.environ["PATH"] += os.pathsep + r'C:\Users\ajs8911\Miniconda3\envs\bw2\Librar
 # fs_unit = flowsheet.unit
 
 def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
-                 report, num_samples, uncertainty, sensitivity, parameter, optimization, desire_target):
+                 report, num_samples, uncertainty, sensitivity, parameter, optimization, desire_target, desire_scenario):
     fununit = fununit
     feedPG = feedPG
     REEcontent = REEcontent
@@ -427,7 +437,8 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
 
         # TEA Results (high level)
         # -------------------------------
-        MSP_table, MSP_unit_table, indicator_contributions = MSP_results()
+        # MSP_table, MSP_unit_table, indicator_contributions = MSP_results()
+        MSP_table, MSP_unit_table, indicator_contributions = analysis_MSP_contributions(sys=sys, tea=tea, fs_stream=fs_stream, fs_unit=fs_unit, fununit=fununit, lca_results=lca_results, figures_path=figures_path)
         tea_result = tea_results()
         lst = [tea_result, MSP_table, MSP_unit_table, indicator_contributions]
         tables_to_excel(lst, writer, 'Results high level')
@@ -569,905 +580,57 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
         tea_table.index = tea_ind
         return tea_table
 
-    def MSP_results():
-        """
-        Calculations of contributors to MSP performed according to NREL methods
-
-
-        important results tables:
-        ----------------
-        MSP_table                 -     high level MSP contributions
-        
-        MSP_unit_table            -     process section level level MSP contributions
-        
-        indicator_contributions   -     process section level indicator contributions
-        """
-        # Calculate the MSP for the system
-        MSP = tea.solve_price(fs_stream.Ln2O3) # $/kg REO
-        # Calculate Average Income Tax (NREL method)
-        CF_table = tea.get_cashflow_table() # cashflow table (dataframe)
-        discount_factor_CF = CF_table.iloc[:,14] # discount factor for each year 
-        tax_CF = CF_table.iloc[:,10] # income tax ($)
-        tax_CF_sum = np.sum(tax_CF*discount_factor_CF)*1000000 # discounted income tax over project lifespan ($)
-        sales_CF = [sys.get_market_value(fs_stream.Ln2O3)]*len(tax_CF) # sales ($)
-        sales_CF_sum = np.sum(sales_CF*discount_factor_CF) # total discounted sales over project lifespan ($)
-        average_income_tax = tax_CF_sum/sales_CF_sum*MSP # NREL defined average income tax ($/kg REO)
-        # Calculate other Contributors to MSP
-        product_mflow = fs_stream.Ln2O3.F_mass*24*tea.operating_days # mass flow rate of REO product in kg/year
-        gypsum_sales_MSP = -sys.get_market_value(fs_stream.gypsum)/product_mflow # $/kg REO. negative sign bc this is a byproduct not a cost.
-        VOC_MSP = tea.VOC/product_mflow # variable operating cost ($/kg REO)
-        FOC_MSP = tea.FOC/product_mflow # fixed operating cost ($/kg REO)
-        capital_dep_MSP = tea.FCI/(tea.duration[1]-tea.duration[0])/product_mflow # capital depreciation ($/kg REO)
-        # Calculate Average Return on Investment as defined by NREL
-        average_ROI_MSP = MSP-np.sum([VOC_MSP, gypsum_sales_MSP, FOC_MSP, capital_dep_MSP, average_income_tax]) # $/kg REO
-        # Get the high level process economics data to calculate contributions to MSP
-        MSP_table_values = [MSP, VOC_MSP, gypsum_sales_MSP, FOC_MSP, capital_dep_MSP, average_income_tax, average_ROI_MSP]
-        MSP_table_index = ['MSP', 'VOC', 'Gypsum Credit', 'FOC', 'Capital Depreciation', 'Average Income Tax', 'Average Return on Investment']
-        MSP_table = pd.DataFrame(MSP_table_values)
-        MSP_table.index = MSP_table_index
-        MSP_table.columns = [''] # Manufacturing Costs (USD/kg REO)
-
-        # Create a stacked bar chart
-        # blue 82cfd0
-        # blue/green 00a996
-        # green 3ba459
-        # yellow/green 8ead3e
-        # dark green 007f3d
-        # orange fcb813
-        # brown 98876e
-        # gray 403a48
-        custom_colors = ['#82cfd0', '#403a48', '#fcb813', '#007f3d', '#8ead3e', '#3ba459'] # order of legend VOC, credit, FOC, cap deprec., tax, ROI
-
-        # Create figures the correct size for publication
-        aspect_ratio_LtoW = 6/4
-        cm_to_in = 1/2.54  # centimeters in inches
-        width_one_col = 8.3 # cm. Width for a one column figure
-        width_two_col = 17.1 # cm. Width for a two column figure
-        max_length = 23.3 # cm. The maximum lenght a figure can be
-
-        plt.style.use('default')
-        fig, ax = plt.subplots(figsize=(width_one_col*cm_to_in, width_one_col*aspect_ratio_LtoW*cm_to_in))
-        ax = MSP_table.drop('MSP', axis=0).T.plot(kind='bar', stacked=True, color=custom_colors, ax=ax)
-        # Set labels and title
-        ax.set_ylabel('Minimum Selling Price (USD/kg REO)')
-        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1) ) # , ncol=len(combined_df.index)
-        ax.axhline(y=0, color='black', linewidth=0.8)
-        fig.tight_layout()
-        # Show the plot
-        fig.savefig(os.path.join(figures_path, f'MSP_Contributions.tiff'), dpi=600)
-
-        # Gather process economics results for each unit and each inlet flow
-        result = [] 
-        for i in fs_unit:
-            for j in i.ins:
-                feed_cost = j.price*j.F_mass*24*tea.operating_days
-                PandH = i.utility_cost*tea.operating_days*24 + sum([k for k in i.add_OPEX.values()])*tea.operating_days*24
-                result.append([i.ID, j.price, j.F_mass, i.purchase_cost, feed_cost, PandH])
-        econ_results_unit = pd.DataFrame(result) # process economics results by unit and by inlet flow
-        econ_results_unit.index = econ_results_unit.iloc[:,0]
-        econ_results_unit.columns = ['ID', 'Price', 'Mass Flow', 'Purchase Cost', 'Chemicals and Materials', 'Utilities']
-
-        # Group by index and aggregate rows performing different math operations for each column
-        econ_results_combined = econ_results_unit.groupby(econ_results_unit.index).agg({'Purchase Cost':'mean', 'Chemicals and Materials':'sum', 'Utilities':'mean'})
-        econ_results_combined.loc['S1','Utilities'] = fs_unit.S1.utility_cost*tea.operating_days*24 # Do not want membrane cost here
-        econ_results_combined.loc['S1','Chemicals and Materials'] = [i for i in fs_unit.S1.add_OPEX.values()][0]*24*tea.operating_days + econ_results_combined.loc['S1','Chemicals and Materials'] # Put membrane cost here
-        econ_results_combined_2 = econ_results_combined.copy()
-
-        # Create an index map to aggregate unit ID to process section
-        index_mapping = {'U1': 'Leaching', 'F1': 'Leaching', 'F2': 'Leaching', 'M1': 'Leaching',
-            'P1': 'Concentration', 'F3': 'Concentration', 'H1': 'Concentration',
-            'P2': 'Refining', 'F4': 'Refining', 'H2': 'Refining', 'M2': 'Refining', 'M3': 'Refining',
-            'S1': 'Separation', 'RS': 'Separation',
-            'WT':'Wastewater Treatment', 'P3': 'Wastewater Treatment',
-            'M4': 'REO Credit',
-            'M0': 'PG Remediation Credit'}
-        # Replace the index values based on the mapping
-        econ_results_combined_2.index = econ_results_combined.index.to_series().replace(index_mapping)
-        # Group by index and aggregate 'Value' using sum
-        econ_results_grouped = econ_results_combined_2.groupby(econ_results_combined_2.index).agg({'Purchase Cost':'sum', 'Chemicals and Materials':'sum', 'Utilities':'sum'})
-        econ_results_grouped.loc['Separation', 'Purchase Cost'] = fs_unit.S1.membrane_cost/4.28
-
-        # Create the MSP_unit table
-        MSP_unit_table = econ_results_grouped.copy()
-        MSP_unit_table = MSP_unit_table.reindex(['Leaching', 'Concentration', 'Separation', 'Refining', 'Wastewater Treatment', 'REO Credit', 'PG Remediation Credit'])
-        # insert a column for the gypsum credit
-        gypsum_credit = [sys.get_market_value(fs_stream.gypsum), 0, 0, 0, 0, 0, 0]
-        MSP_unit_table.insert(3, 'Gypsum Credit', gypsum_credit)
-        # Convert econ_results_grouped into MSP contributions
-        MSP_unit_table['Chemicals and Materials'] = MSP_unit_table['Chemicals and Materials'].multiply(1/product_mflow)
-        MSP_unit_table['Utilities'] = MSP_unit_table['Utilities'].multiply(1/product_mflow)
-        MSP_unit_table['Gypsum Credit'] = MSP_unit_table['Gypsum Credit'].multiply(-1/product_mflow)
-        cap_recovery_charge = MSP_table.loc['Average Return on Investment'].values + MSP_table.loc['Average Income Tax'].values + MSP_table.loc['Capital Depreciation'].values
-        MSP_unit_table['Fixed Operating Cost'] = MSP_unit_table.loc[:,'Purchase Cost'].multiply(4.28/tea.FCI*MSP_table.loc['FOC'].values[0])
-        MSP_unit_table['Capital Recovery Charge'] = MSP_unit_table.loc[:,'Purchase Cost'].multiply(4.28/tea.FCI*cap_recovery_charge[0])
-        MSP_unit_table.drop('Purchase Cost', inplace=True, axis=1)
-        MSP_unit_table.drop('PG Remediation Credit', inplace=True, axis=0)
-
-        # Create a stacked bar chart of unit level MSP contributors
-        # blue 82cfd0
-        # green 3ba459
-        # orange fcb813
-        # brown 98876e
-        # gray 403a48
-        custom_colors = ['#82cfd0', '#98876e', '#403a48', '#fcb813', '#3ba459']
-
-        aspect_ratio_LtoW = 1.5 # Length/Width
-        fig, ax = plt.subplots(figsize=(width_one_col*cm_to_in, width_one_col*aspect_ratio_LtoW*cm_to_in))
-        ax = MSP_unit_table.drop('REO Credit', axis=0).plot(kind='bar', stacked=True, color=custom_colors, ax=ax)
-        # Set labels and title
-        ax.set_ylabel('Minimum Selling Price (USD/kg REO)')
-        ax.set_xlabel('')
-        ax.legend().remove()
-        fig.legend(loc='upper left', bbox_to_anchor=(0.2, 1.01)) # , ncol=len(combined_df.index) ,bbox_to_anchor=(1.25, 0.65)
-        # ax.legend(loc='lower right')
-        ax.axhline(y=0, color='black', linewidth=0.8)
-        fig.tight_layout()
-        fig.subplots_adjust(top=0.75)
-        # Show the plot
-        fig.savefig(os.path.join(figures_path, f'MSP_Unit_Contributions.tiff'), dpi=600)
-
-
-        # # Confirm TEA class methods match system class methods
-        # tea.system.material_cost == feed_utility_table.loc[:,'Feed Cost'].sum() # Confirm Feed Cost
-        # round(tea.utility_cost/1000000,6) == round(feed_utility_table.loc[:,'Utility Cost'].sum()/1000000,6) # Confirm Utility Cost
-        # MSP_full_table.sum().sum() == MSP # Confirm overall MSP total
-
-        lca_stream_table, lca_other_table, lca_unit_result, lca_final_table = lca_results()
-        lca_unit_result_sums = np.abs(lca_unit_result).sum()
-        lca_unit_result.drop('Human Health', inplace=True, axis=1) # Gets rid of duplicate EI-99 LCIA result for GW
-        lca_contributions = lca_unit_result.apply(lambda col: col*100 / lca_unit_result_sums[col.name], axis=0) # rescale the values so that the absolute value of the indicator sums to 100%
-
-        index_mapping = {'U1': 'Leaching', 'F1': 'Leaching', 'F2': 'Leaching',
-            'P1': 'Concentration', 'F3': 'Concentration', 'H1': 'Concentration', 
-            'P2': 'Refining', 'F4': 'Refining', 'H2': 'Refining',
-            'RS': 'Separation','S1': 'Separation',
-            'WT':'Wastewater Treatment', 'P3': 'Wastewater Treatment',
-            'M1': 'Gypsum Credit',
-            'M4': 'REO Credit',
-            'M0': 'PG Remediation Credit'}
-        # Replace the index values based on the mapping
-        lca_contributions.index = lca_contributions.index.to_series().replace(index_mapping)
-        lca_contributions['Natural Land Transformation'] = lca_contributions.loc[:, 'Natural Land Transformation'].multiply(-1) # for some reason CFs for NLTP are inverted (*-1). This appears to be an ecoinvent 3.8 LCIA method list issue not a brightway2 issue.
-
-        # Group by index and aggregate 'Value' using sum
-        indicator_contributions = lca_contributions.groupby(lca_contributions.index).agg('sum')
-
-        # Add MSP to the other indicators
-        testing_table = MSP_unit_table.copy() # make a copy of the MSP df (index: process sections, col: material cost, utility cost, gypsum credit, FOC, and capital recovery)
-        testing_table.drop('Gypsum Credit', inplace=True, axis=1) # drop the gypsum credit column
-        testing_table = np.abs(testing_table).sum(axis=1) # sum the across all the columns (reduce to one column)
-        testing_table.loc['Gypsum Credit'] = -sys.get_market_value(fs_stream.gypsum)/product_mflow # add gypsum credit back as a row
-        testing_table = testing_table.sort_index().multiply(100/np.abs(testing_table).sum()) # rescale the values so that the absolute value of the indicator sums to 100%
-        indicator_contributions['Minimum Selling Price'] = testing_table # add the scaled MSP values to the scaled LCA values for plotting
-        if fununit == 'PG':
-            indicator_contributions = indicator_contributions.reindex(['Leaching', 'Concentration', 'Separation', 'Refining', 'Wastewater Treatment','Gypsum Credit', 'REO Credit']) # put the df in order so that it plots nicely
-        else:
-            indicator_contributions = indicator_contributions.reindex(['Leaching', 'Concentration', 'Separation', 'Refining', 'Wastewater Treatment','Gypsum Credit', 'PG Remediation Credit']) # put the df in order so that it plots nicely
-
-        # Create a stacked bar chart
-        # red f1777f
-        # blue 60c1cf
-        # green 79bf82
-        # orange f98f60
-        # purple a280b9
-        # gray 90918e
-        # yellow f3c354
-        # black 403a48
-        custom_colors = ['#f1777f', '#60c1cf', '#79bf82', '#f98f60', '#a280b9', '#90918e', '#403a48', '#403a48']
-
-        aspect_ratio_LtoW = 1 # 6/10
-        fig, ax = plt.subplots(figsize=(width_two_col*cm_to_in, width_two_col*aspect_ratio_LtoW*cm_to_in)) # Matplotlib wants input in inches (width, length/height)
-        ax = indicator_contributions.T.plot(kind='bar', stacked=True, color=custom_colors, ax=ax)
-
-        # Set labels and title
-        ax.set_ylabel('Contribution to Indicator (%)')
-        ax.set_ylim(-100,100)
-        # ax.set_xticklabels(ax.get_xticklabels(), rotation=55, ha='right')
-        ax.axhline(y=0, color='black', linewidth=0.8)
-        #get handles and labels
-        handles, labels = plt.gca().get_legend_handles_labels()
-        #specify order of items in legend
-        order = [0, 1, 2, 3, 4, 5, 6] # Controls the order of process sections in the figure legend. Each number corresponds to a process section
-        #add legend to plot
-        ax.legend().remove()  # This removes the default legend
-        fig.legend([handles[idx] for idx in order],[labels[idx] for idx in order], loc=9, ncol = 4) # , bbox_to_anchor=(1.45, 0.75)
-        fig.tight_layout() # rect=[0, 0, 0.95, 1]
-        fig.subplots_adjust(top=0.9)
-        # Show the plot
-        fig.savefig(os.path.join(figures_path, f'Indicator_Contributions_{fununit}.tiff'), dpi=600)
-        return MSP_table, MSP_unit_table, indicator_contributions
-
+    # Create analysis excel report and some baseline figures
     if report == 'yes':
         create_report(system=sys, file=os.path.join(results_path, f'{sys.ID}_results_{fununit}_{feedPG}_{REEcontent}_{num_ind_REEs}.xlsx'))
 
 
-    # ===========================================================================================================
-    # Uncertainty and Sensitivity for base model
-    # ===========================================================================================================
-
-    target = 'no' # To let the first model run without considering the additional uncertainty of considering a larger range of the target parameter
-    def run_uncertainty(sys, fununit):
-        # Create model
-        # -------------------------
-        model_uncertainty = create_model(sys, fununit, 'all', target) # set system, functional unit, and type of parameter for analysis
-
-        np.random.seed(3221) # setting the seed ensures you get the same sample
-
-        samples = model_uncertainty.sample(N=num_samples, rule='L')
-        model_uncertainty.load_samples(samples)
-        model_uncertainty.evaluate()
-
-        # 2-D kernel density plot with box/whisker in margins (for showing uncertainty for two indicators)
-        # --------------------------
-        for i in range(0, len(model_uncertainty.metrics)):
-            if 'GWP100' in model_uncertainty.metrics[i].name:
-                GWP_result = model_uncertainty.metrics[i]
-            elif 'NPV15' in model_uncertainty.metrics[i].name:
-                NPV_result = model_uncertainty.metrics[i]
-            elif 'MSP' in model_uncertainty.metrics[i].name:
-                MSP_result = model_uncertainty.metrics[i]
-
-        xdata = model_uncertainty.table.loc[:,('TEA', 'NPV15 [MM USD/kg]')][lambda x:x>-4000] 
-        ydata = model_uncertainty.table.loc[:,('LCA', 'Global Warming [kg CO2-Eq/kg PG]')]
-        plt.style.use('default')
-        fig = sns.JointGrid()
-        sns.kdeplot(x = xdata, y = ydata, fill=True, color= '#79bf82', ax = fig.ax_joint)
-        sns.boxplot(x = xdata, ax = fig.ax_marg_x, color= '#79bf82')
-        sns.boxplot(y = ydata, ax = fig.ax_marg_y, color= '#79bf82')
-        fig.set_axis_labels(xlabel=f'NPV15 (MM USD)', ylabel=f'Global Warming (kg CO\u2082-eq/kg {fununit})')
-        # fig, ax = qs.stats.plot_uncertainties(model_uncertainty, x_axis=NPV_result, y_axis=GWP_result, kind='kde-box', center_kws={'fill': True, 'color': '#79bf82'}, margin_kws={'color': '#79bf82'}) 
-        # ax0, ax1, ax2 = fig.axes # KDE, top box, right box
-        # ax0.set(xlabel=f'NPV (MM USD)', ylabel=f'Global Warming (kg CO2 Eq./kg {fununit})')
-        fig.savefig(os.path.join(figures_path, f'kde_uncertainty_{fununit}.tiff'), dpi=600)
-        return model_uncertainty
-
-    def run_sensitivity(sys, fununit):
-        # Sensitivity Analysis
-        # -------------------------
-        # use above model to get correlations 
-        model_sensitivity = create_model(sys, fununit, parameter, 'no') # set system, functional unit, and type of parameter for analysis
-
-        np.random.seed(3221) # setting the seed ensures you get the same sample
-
-        samples = model_sensitivity.sample(N=num_samples, rule='L')
-        model_sensitivity.load_samples(samples)
-        model_sensitivity.evaluate()
-        r_df, p_df = qs.stats.get_correlations(model_sensitivity, kind='Spearman')
-
-        # # sort the parameters by alphabetically by unit ID then parameter name
-        # lst1 = [i.element for i in model_sensitivity.get_parameters()]
-        # lst2 = [i.name for i in model_sensitivity.get_parameters()]
-        # key_parameters = sorted(list(zip(lst1, lst2)), key=lambda x: x[0])
-
-        # Filter out parameters that only meet a certain threshold
-        def filter_parameters(model, df, threshold):
-            new_df = pd.concat((df[df>=threshold], df[df<=-threshold]))
-            filtered = new_df.dropna(how='all')
-            param_dct = {p.name_with_units:p for p in model.get_parameters()}
-            parameters = set(param_dct[i[1]] for i in filtered.index)
-            return list(parameters)
-        key_parameters2 = filter_parameters(model_sensitivity, r_df, threshold=0.3) # Only want parameters with Spearman's rho >= 0.4 or <= -0.4
-
-        # Manually make changes to bubble plot built off functions from qsdsan.stats
-        def _update_df_names(df, columns=True, index=True):
-            new_df = df.copy()
-
-            if columns and not new_df.columns.empty:
-                try:
-                    iter(new_df.columns)
-                    new_df.columns = [i[-1].split(' [')[0] for i in new_df.columns]
-                except: pass
-
-            if index and not new_df.index.empty:
-                try:
-                    iter(new_df.index)
-                    new_df.index = [i[-1].split(' [')[0] for i in new_df.index]
-                except: pass
-
-            return new_df
-
-        def _update_input(input_val, default_val):
-            if input_val is None:
-                return default_val
-            else:
-                try:
-                    iter(input_val)
-                    if len(input_val)==0: # empty iterable
-                        return default_val
-                    return input_val if not isinstance(input_val, str) else (input_val,)
-                except:
-                    return (input_val,)
-
-        df = _update_df_names(r_df)
-
-        filtered_unit_name = [i.element for i in key_parameters2]
-        filtered_param_name = [i.name for i in key_parameters2]
-        key_parameters2 = sorted(list(zip(filtered_unit_name, filtered_param_name)), key=lambda x: x[0])
-        param_names = _update_input(np.array(key_parameters2)[:,1], df.index)
-        # param_names = [i.name for i in key_parameters2]
-        param_names = param_names if isinstance(param_names[0], str) \
-                                    else [p.name for p in param_names]
-        metric_names = _update_input(model_sensitivity.metrics, df.columns)
-        metric_names = metric_names if isinstance(metric_names[0], str) \
-                                    else [m.name for m in metric_names]
-
-        df = df[metric_names].loc[param_names]
-
-
-        corr_df = df.stack(dropna=False).reset_index()
-        corr_df.rename(columns={'level_0': 'parameter', 'level_1': 'metric',
-                                0: 'Sign'}, inplace=True)
-        corr_df['Correlation'] = corr_df['Sign'].abs()
-
-        # correlation dataframe for heatmap plot
-        corr_df2 = df.stack(dropna=False).reset_index()
-        corr_df2.rename(columns={'level_0': 'parameter', 'level_1': 'metric',
-                                0: 'Sign'}, inplace=True)
-        corr_df2['Correlation'] = corr_df['Sign']
-
-        # make DataFrame
-        data = {'Sign': corr_df['Sign']}
-        df_gpt = pd.DataFrame(data)
-
-        # Function to categorize values
-        def categorize_sign(value):
-            if value < 0:
-                return '$-$'
-            elif value > 0:
-                return '$+$'
-            else:
-                return 'Zero'
-
-        # Apply the function to create a new column
-        corr_df['Sign'] = df_gpt['Sign'].apply(categorize_sign)
-
-        # Remove all metrics that aren't economic because enviornmental impacts are unchanged by price changes
-        if parameter == 'contextual':
-            corr_df = corr_df[~corr_df['metric'].isin(metric_names[3:])] 
-
-        # Begin plotting
-        def _plot_corr_bubble(corr_df, ratio, **kwargs):
-            plt.style.use('default')
-
-            if parameter == 'technological':
-                margin_x = kwargs['margin_x'] if 'margin_x' in kwargs.keys() else 0.05
-                margin_y = kwargs['margin_y'] if 'margin_y' in kwargs.keys() else 0.05
-                kwargs = {i: kwargs[i] for i in kwargs.keys() if 'margin' not in i}
-
-                keys = ('height', 'aspect', 'sizes', 'size_norm', 'edgecolor') # , 'palette'
-                values = (9+ratio, 1, (0, 1000), (0, 2.5), '0.5') # , ['#60c1cf', '#f1777f']
-            elif parameter == 'contextual':
-                margin_x = kwargs['margin_x'] if 'margin_x' in kwargs.keys() else 0.2/ratio
-                margin_y = kwargs['margin_y'] if 'margin_y' in kwargs.keys() else 0.05
-                kwargs = {i: kwargs[i] for i in kwargs.keys() if 'margin' not in i}
-
-                keys = ('height', 'aspect', 'sizes', 'size_norm', 'edgecolor') # , 'palette'
-                values = (7+ratio, 0.7, (0, 1000), (0, 2.5), '0.5') # , ['#60c1cf', '#f1777f']
-            else: 
-                RuntimeError(f'parameter={parameter} is not "technological" or "contextual". Please define as one of these two.')
-
-            for num, k in enumerate(keys):
-                kwargs.setdefault(keys[num], values[num])
-
-            g = sns.relplot(data=corr_df, x='metric', y='parameter',
-                            hue='Sign', size='Correlation', palette= {'$+$':'#60c1cf', '$-$':'#f1777f'}, **kwargs)
-
-            g.set(xlabel='', ylabel='', aspect=1)
-            g.ax.margins(x=margin_x, y=margin_y)
-
-            for label in g.ax.get_xticklabels():
-                label.set_rotation(90)
-
-            for artist in g.legend.legendHandles:
-                artist.set_edgecolor('1')
-
-            for key in g.ax.spines.keys():
-                g.ax.spines[key].set(color='k', linewidth=0.5, visible=True)
-
-            g.ax.grid(True, which='major', color='k',linestyle='--', linewidth=0.3)
-            g.tight_layout()
-            
-            if parameter == 'technological':
-                sns.move_legend(g, 'center right', bbox_to_anchor=(1.025, 0.55))
-            elif parameter == 'contextual':
-                sns.move_legend(g, 'center right', bbox_to_anchor=(0.85, 0.55))
-            else: 
-                RuntimeError(f'parameter={parameter} is not "technological" or "contextual". Please define as one of these two.')
-
-            return g
-
-        # g = _plot_corr_bubble(corr_df, len(metric_names)/len(param_names))
-        # g.savefig(os.path.join(figures_path, f'bubble_sensitivity_{fununit}_{parameter}.tiff'), dpi=600)
-
-        pivot_corr_df = corr_df2.pivot(index="parameter", columns="metric", values="Correlation")
-        pivot_corr_df = pivot_corr_df.sort_index(key=lambda x: [i.split('(')[1] for i in x])
-        pivot_corr_df = pivot_corr_df.reindex(columns=['Agricultural Land Occupation',
-        'Fossil Depletion',
-        'Freshwater Ecotoxicity',
-        'Freshwater Eutrophication',
-        'Global Warming',
-        'Human Toxicity',
-        'Ionising Radiation',
-        'Marine Ecotoxicity',
-        'Marine Eutrophication',
-        'Metal Depletion',
-        'Natural Land Transformation',
-        'Ozone Depletion',
-        'Particulate Matter Formation',
-        'Photochemical Oxidant Formation',
-        'Terrestrial Acidification',
-        'Terrestrial Ecotoxicity',
-        'Urban Land Occupation',
-        'Water Depletion',
-        'NPV15',
-        'IRR',
-        'MSP'])
-
-        # Create figures the correct size for publication
-        aspect_ratio_LtoW = 0.65
-        cm_to_in = 1/2.54  # centimeters in inches
-        width_one_col = 8.3 # cm. Width for a one column figure
-        width_two_col = 17.1 # cm. Width for a two column figure
-        max_length = 23.3 # cm. The maximum lenght a figure can be
-
-        fig, ax = plt.subplots(figsize=(width_two_col*cm_to_in, width_two_col*aspect_ratio_LtoW*cm_to_in))
-        sns.heatmap(data=pivot_corr_df, cmap=sns.color_palette("vlag_r", as_cmap=True))
-        ax.set(xlabel='', ylabel='')
-        fig.tight_layout()
-        fig.savefig(os.path.join(figures_path, f'Sensitivity_contributions_heatmap.tiff'), dpi=600)
-
-        # Morris OAT Analysis
-        # -------------------------
-        # model_morris = create_model(sys, fununit, parameter, target) # set system, functional unit, and type of parameter for analysis
-        
-        # inputs = qs.stats.define_inputs(model_morris)
-        # samples_morris = qs.stats.generate_samples(inputs, kind='Morris', N=10, seed=554) # num_levels=num_levels. Default is 4
-
-        # model_morris.load_samples(samples_morris)
-        # model_morris.evaluate()
-
-        # dct = qs.stats.morris_analysis(model_morris, inputs, seed=554, nan_policy='fill_mean', file=os.path.join(results_path, f'Morris_Sensitivity_{fununit}_{parameter}.xlsx'))
-        # fig, ax = qs.stats.plot_morris_results(dct, metric=model.metrics[0]) 
-        # fig.savefig(os.path.join(figures_path, f'Morris_Sensitivity_{fununit}_{parameter}.png'), dpi=300)
-        return model_sensitivity
-
-    def ind_trend_analysis(model, p_name):
-        # Indicator Trend Analysis
-        # --------------------------
-        
-        # Define parameter of interest
-        ind_parameter = [i.name for i in model._parameters].index(p_name)
-        p_units = model._parameters[ind_parameter].units
-        
-        # Define range of parameter
-        lower = model._parameters[ind_parameter].distribution.lower[0]
-        upper = model._parameters[ind_parameter].distribution.upper[0]
-        num_bins = 65
-        
-        # Define the bin width and make a list of bin centers
-        bin_width = (upper-lower)/num_bins
-        bin_centers = np.linspace(lower + bin_width/2, upper - bin_width/2, num=int((upper - lower) / bin_width))
-        mean_output_parameter_binned = []
-        std_output_parameter_binned = []
-
-        # Gather the mean and standard deviation for each bin from the model results
-        for bin_center in bin_centers:
-            bin_start = bin_center - bin_width/2
-            bin_end = bin_center + bin_width/2
-            bin_indices = np.logical_and(model.table.loc[:, (model._parameters[ind_parameter].element, f'{p_name} [{p_units}]')].values >= bin_start, 
-                                        model.table.loc[:, (model._parameters[ind_parameter].element, f'{p_name} [{p_units}]')].values < bin_end)
-            bin_data = model.table.loc[:,('TEA', 'IRR [%]')].values[bin_indices]
-            mean_output_parameter_binned.append(np.mean(bin_data))
-            std_output_parameter_binned.append(np.std(bin_data))
-
-        # Smooth the data using cubic spline interpolation
-        smooth_x_values = np.linspace(lower, upper, num=1000)  # Increase the number of points for smooth curves
-        mean_interpolator = np.interp(smooth_x_values, bin_centers, mean_output_parameter_binned)
-        std_interpolator = np.interp(smooth_x_values, bin_centers, std_output_parameter_binned)
-
-        # Create the line plot with uncertainty using plot and fill_between
-        fig, ax = plt.subplots()
-        ax.plot(smooth_x_values, mean_interpolator, color='#60c1cf', label='Mean IRR')
-        ax.fill_between(smooth_x_values, mean_interpolator - 2*std_interpolator, mean_interpolator + 2*std_interpolator, color='#60c1cf', alpha=0.3, label='Confidence Interval (95%)')
-        # Add labels and title
-        ax.set(xlabel=f'{p_name} ({p_units})', ylabel='IRR (fraction)', xlim=(lower,upper), ylim=(0,0.4))
-        # Show the legend
-        ax.legend(loc='upper left')
-        # Save the plot
-        fig.savefig(os.path.join(figures_path, f'IRR_Trend_{p_name}.tiff'), dpi=600)
-        # plt.show()
-
-
+    # Uncertainty Analysis
+    # -------------------------
     if uncertainty == 'yes':
-        model_uncertainty = run_uncertainty(sys, fununit)
+        model_uncertainty = analysis_uncertainty(sys, fununit, num_samples, figures_path)
         qs.Model._reset_system(model_uncertainty)
-        qs.Model.metrics_at_baseline(model_uncertainty)
+
+    # Sensitivity Analysis
+    # -------------------------
     if sensitivity == 'yes':
-        model_sensitivity = run_sensitivity(sys, fununit)
+        model_sensitivity = analysis_sensitivity(sys, fununit, parameter, num_samples, figures_path)
         if parameter == 'technological':
-            ind_trend_analysis(model_sensitivity, 'Acid Concentration (U1)') # input parameter name as it appears in model.py @param()
-            ind_trend_analysis(model_sensitivity, 'Solvent to Solid Ratio (U1)')
-            ind_trend_analysis(model_sensitivity, 'Sodium Hydroxide Feed (P3)')
+            analysis_indicator_trend(model_sensitivity, 'Acid Concentration (U1)', figures_path=figures_path) # input parameter name as it appears in model.py @param()
+            analysis_indicator_trend(model_sensitivity, 'Solvent to Solid Ratio (U1)', figures_path=figures_path)
+            analysis_indicator_trend(model_sensitivity, 'Sodium Hydroxide Feed (P3)', figures_path=figures_path)
         qs.Model._reset_system(model_sensitivity)
-        qs.Model.metrics_at_baseline(model_sensitivity)
 
 
-    # =============================================================================
-    # Preoptimization Contour Plots
-    # =============================================================================
-
-    # def leaching_solventRatio_temp_NPV(sys, fununit):
-    #     model = create_model_leaching(sys, fununit)
-    #     # order of model parameter output [time, temp, conc, solventRatio]
-
-    #     y = np.linspace(25, 70, 20) # y axis variable (temperature)
-    #     x = np.linspace(2, 7, num=len(y)) # y axis variable (time)
-    #     f1 = [5]*len(y) # fixed parameter not changing
-    #     f2 = [120]*len(y) # fixed parameter not changing
-    #     result = []
-    #     i = 0
-
-    #     while i < len(y):
-    #         xi = [x[i] for n in range(len(y))]
-    #         samples = pd.DataFrame(columns = ['x', 'y', 'f1', 'f2'])
-    #         samples['x'], samples['y'], samples['f1'], samples['f2'] = f2, y, f1, xi # model takes columns in order initiated in model.py
-    #         model.load_samples(samples.to_numpy())
-    #         model.evaluate()
-    #         result.extend(model.table.loc[:,('TEA', 'NPV [MM USD/kg]')].values.tolist())
-    #         i += 1
-
-    #     X, Y = np.meshgrid(x, y)
-    #     Z = np.array(result).reshape(len(y),len(y)).T
-
-    #     fig, ax = plt.subplots()
-    #     cp = plt.contourf(X,Y,Z, 20, cmap='inferno')
-    #     fig.colorbar(cp, label=f'NPV (MM USD)')
-    #     ax.set(xlabel='Liquid/Solid Ratio', ylabel='Leaching Temperature (deg C)')
-    #     fig.savefig(os.path.join(figures_path, f'test_leaching_temp_solventRatio_NPV_{fununit}.png'), dpi=300)
-
-    # def leaching_solventRatio_time_NPV(sys, fununit):
-    #     model = create_model_leaching(sys, fununit)
-    #     # order of model parameter output [time, temp, conc, solventRatio]
-
-    #     y = np.linspace(25, 205, 20) # y axis variable (temperature)
-    #     x = np.linspace(2, 7, num=len(y)) # y axis variable (time)
-    #     f1 = [5]*len(y) # fixed parameter not changing
-    #     f2 = [50]*len(y) # fixed parameter not changing
-    #     result = []
-    #     i = 0
-
-    #     while i < len(y):
-    #         xi = [x[i] for n in range(len(y))]
-    #         samples = pd.DataFrame(columns = ['x', 'y', 'f1', 'f2'])
-    #         samples['x'], samples['y'], samples['f1'], samples['f2'] = y, f2, f1, xi # model takes columns in order initiated in model.py
-    #         model.load_samples(samples.to_numpy())
-    #         model.evaluate()
-    #         result.extend(model.table.loc[:,('TEA', 'NPV [MM USD/kg]')].values.tolist())
-    #         i += 1
-
-    #     X, Y = np.meshgrid(x, y)
-    #     Z = np.array(result).reshape(len(y),len(y)).T
-
-    #     fig, ax = plt.subplots()
-    #     cp = plt.contourf(X,Y,Z, 20, cmap='inferno')
-    #     fig.colorbar(cp, label=f'NPV (MM USD)')
-    #     ax.set(xlabel='Liquid/Solid Ratio', ylabel='Leaching Time (min)')
-    #     fig.savefig(os.path.join(figures_path, f'test_leaching_solventRatio_time_NPV_{fununit}.png'), dpi=300)
-
-    # # Old calculation
-    # leaching_solventRatio_temp_NPV(sys, fununit)
-    # leaching_solventRatio_time_NPV(sys, fununit)
-
-    def optimization_leaching(system, fununit, xdata, ydata, f1data, f2data, indicator, nsamples): # set system and functional unit
-        # arrays for the full range of each leaching parameter equally spaced
-        time = np.linspace(25, 205, nsamples)
-        temp = np.linspace(20, 70, nsamples)
-        conc = np.linspace(1, 9.5, nsamples)
-        solventRatio = np.linspace(2, 7, nsamples)
-
-        # base case/optimal values from Liang et al - 2017
-        ftime = 200
-        ftemp = 47
-        fconc = 3
-        fsolventRatio = 2.5
-
-        samples = pd.DataFrame(columns = ['time', 'temp', 'conc', 'solventRatio'])
-        
-        if ydata == 'time':
-            y=time
-            ylabel = 'Leaching Time (min)'
-            samples['time'] = y
-        elif ydata == 'temp':
-            y = temp
-            ylabel = 'Leaching Temperature (deg C)'
-            samples['temp'] = y
-        elif ydata == 'conc':
-            y = conc
-            ylabel = 'Acid Concentration (wt %)'
-            samples['conc'] = y
-        elif ydata =='solventRatio':
-            y = solventRatio
-            ylabel = 'Liquid/Solid Ratio'
-            samples['solventRatio'] = y
-        else:
-            raise RuntimeError('"ydata" is not in an acceptable form')
-
-        if f1data == 'time':
-            f1=[ftime]*len(y)
-            samples['time'] = f1
-        elif f1data == 'temp':
-            f1 = [ftemp]*len(y)
-            samples['temp'] = f1
-        elif f1data == 'conc':
-            f1 = [fconc]*len(y)
-            samples['conc'] = f1
-        elif f1data =='solventRatio':
-            f1 = [fsolventRatio]*len(y)
-            samples['solventRatio'] = f1
-        else:
-            raise RuntimeError('"f1data" is not in an acceptable form')
-
-        if f2data == 'time':
-            f2=[ftime]*len(y)
-            samples['time'] = f2
-        elif f2data == 'temp':
-            f2 = [ftemp]*len(y)
-            samples['temp'] = f2
-        elif f2data == 'conc':
-            f2 = [fconc]*len(y)
-            samples['conc'] = f2
-        elif f2data =='solventRatio':
-            f2 = [fsolventRatio]*len(y)
-            samples['solventRatio'] = f2
-        else:
-            raise RuntimeError('"f2data" is not in an acceptable form')
-
-        if indicator == 'NPV':
-            ind_slice = ('TEA', 'NPV15 [MM USD/kg]')
-            ind_axis_label = 'NPV (MM USD)'
-            ind_cmap = 'inferno'
-        elif indicator == 'GWP':
-            ind_slice = ('LCA', 'Global Warming [kg CO2-Eq/kg PG]')
-            ind_axis_label = f'Global Warming (kg CO2 eq/kg {fununit})'
-            ind_cmap = 'inferno_r'
-        else:
-            raise RuntimeError('"indicator" is not in an acceptable form. Please set as either "NPV" or GWP"')
-
-        model = create_model_leaching(sys, fununit) # order of model parameter output [time, temp, conc, solventRatio]
-        result = []
-        i = 0
-        if xdata == 'time':
-            x=time
-            xlabel = 'Leaching Time (min)'
-            while i < len(y):
-                xi = [x[i] for n in range(len(y))]
-                samples['time'] = xi
-                model.load_samples(samples.to_numpy())
-                model.evaluate()
-                result.extend(model.table.loc[:,ind_slice].values.tolist())
-                i += 1
-        elif xdata == 'temp':
-            x = temp
-            xlabel = 'Leaching Temperature (deg C)'
-            while i < len(y):
-                xi = [x[i] for n in range(len(y))]
-                samples['temp'] = xi
-                model.load_samples(samples.to_numpy())
-                model.evaluate()
-                result.extend(model.table.loc[:,ind_slice].values.tolist())
-                i += 1
-        elif xdata == 'conc':
-            x = conc
-            xlabel = 'Acid Concentration (wt %)'
-            while i < len(y):
-                xi = [x[i] for n in range(len(y))]
-                samples['conc'] = xi
-                model.load_samples(samples.to_numpy())
-                model.evaluate()
-                result.extend(model.table.loc[:,ind_slice].values.tolist())
-                i += 1
-        elif xdata =='solventRatio':
-            x = solventRatio
-            xlabel = 'Liquid/Solid Ratio'
-            while i < len(y):
-                xi = [x[i] for n in range(len(y))]
-                samples['solventRatio'] = xi
-                model.load_samples(samples.to_numpy())
-                model.evaluate()
-                result.extend(model.table.loc[:,ind_slice].values.tolist())
-                i += 1
-        else:
-            raise RuntimeError('"xdata" is not in an acceptable form')
-
-        X, Y = np.meshgrid(x, y)
-        Z = np.array(result).reshape(len(y),len(y)).T
-
-        plt.style.use('default')
-        fig, ax = plt.subplots()
-        cp = plt.contourf(X,Y,Z, 20, cmap=ind_cmap)
-        fig.colorbar(cp, label=ind_axis_label)
-        ax.set(xlabel=xlabel, ylabel=ylabel)
-        fig.savefig(os.path.join(figures_path, f'leaching_{xdata}_{ydata}_{indicator}_{fununit}.tiff'), dpi=600)
-
-        qs.Model._reset_system(model)
-        qs.Model.metrics_at_baseline(model)
-
+    # Optimization Contour Plots
+    # -----------------------------
     if optimization == 'yes':
         # time   temp   conc   solventRatio   NPV   GWP
         # Optimization by NPV
-        optimization_leaching(system=sys, fununit=fununit, xdata='solventRatio', ydata='temp', f1data='conc', f2data='time', indicator='NPV', nsamples=20)
-        optimization_leaching(system=sys, fununit=fununit, xdata='solventRatio', ydata='time', f1data='conc', f2data='temp', indicator='NPV', nsamples=20)
-        optimization_leaching(system=sys, fununit=fununit, xdata='solventRatio', ydata='conc', f1data='time', f2data='temp', indicator='NPV', nsamples=20)
-        optimization_leaching(system=sys, fununit=fununit, xdata='conc', ydata='time', f1data='temp', f2data='solventRatio', indicator='NPV', nsamples=20)
-        optimization_leaching(system=sys, fununit=fununit, xdata='conc', ydata='temp', f1data='time', f2data='solventRatio', indicator='NPV', nsamples=20)
-        optimization_leaching(system=sys, fununit=fununit, xdata='temp', ydata='time', f1data='conc', f2data='solventRatio', indicator='NPV', nsamples=20)
+        analysis_optimization_leaching(system=sys, fununit=fununit, xdata='solventRatio', ydata='temp', f1data='conc', f2data='time', indicator='NPV', nsamples=20, figures_path=figures_path)
+        analysis_optimization_leaching(system=sys, fununit=fununit, xdata='solventRatio', ydata='time', f1data='conc', f2data='temp', indicator='NPV', nsamples=20, figures_path=figures_path)
+        analysis_optimization_leaching(system=sys, fununit=fununit, xdata='solventRatio', ydata='conc', f1data='time', f2data='temp', indicator='NPV', nsamples=20, figures_path=figures_path)
+        analysis_optimization_leaching(system=sys, fununit=fununit, xdata='conc', ydata='time', f1data='temp', f2data='solventRatio', indicator='NPV', nsamples=20, figures_path=figures_path)
+        analysis_optimization_leaching(system=sys, fununit=fununit, xdata='conc', ydata='temp', f1data='time', f2data='solventRatio', indicator='NPV', nsamples=20, figures_path=figures_path)
+        analysis_optimization_leaching(system=sys, fununit=fununit, xdata='temp', ydata='time', f1data='conc', f2data='solventRatio', indicator='NPV', nsamples=20, figures_path=figures_path)
 
-
-    # =============================================================================
     # Target Analysis
-    # =============================================================================
+    # --------------------------
     if desire_target == 'yes':
-        
-        # Target 1
-        # -------------------
-        sys, lca, tea= create_system(fununit=fununit, feedPG=feedPG, REEcontent=REEcontent, num_ind_REEs=num_ind_REEs)
-        target_n = 'Adsorbent Capacity (S1)'
-        
-        model2 = create_model(sys, fununit, 'all', target=target_n) # set system, functional unit, and type of parameter for analysis
+        analysis_target(fununit=fununit, feedPG=feedPG, REEcontent=REEcontent, num_ind_REEs=num_ind_REEs, num_samples=num_samples, desire_target=desire_target, figures_path=figures_path)
 
-        np.random.seed(3221) # setting the seed ensures you get the same sample
+    # Scenario Analysis
+    # --------------------------
+    if desire_scenario == 'yes':
+        analysis_scenario(fununit, num_ind_REEs, figures_path)
 
-        samples = model2.sample(N=num_samples, rule='L')
-        model2.load_samples(samples)
-        model2.evaluate()
-
-        # Define parameter of interest
-        p_name = target_n
-        ind_parameter = [i.name for i in model2._parameters].index(p_name)
-        p_units = model2._parameters[ind_parameter].units
-        
-        # Define range of parameter
-        lower = model2._parameters[ind_parameter].distribution.lower[0]
-        upper = model2._parameters[ind_parameter].distribution.upper[0]
-        num_bins = 65
-        
-        # Define the bin width and make a list of bin centers
-        bin_width = (upper-lower)/num_bins
-        bin_centers = np.linspace(lower + bin_width/2, upper - bin_width/2, num=int((upper - lower) / bin_width))
-        mean_output_parameter_binned = []
-        std_output_parameter_binned = []
-
-        # Gather the mean and standard deviation for each bin from the model results
-        for bin_center in bin_centers:
-            bin_start = bin_center - bin_width/2
-            bin_end = bin_center + bin_width/2
-            bin_indices = np.logical_and(model2.table.loc[:, (model2._parameters[ind_parameter].element, f'{p_name} [{p_units}]')].values >= bin_start, 
-                                        model2.table.loc[:, (model2._parameters[ind_parameter].element, f'{p_name} [{p_units}]')].values < bin_end) # Gather indices of the parameter values within the bin
-            bin_data = model2.table.loc[:,('TEA', 'NPV15 [MM USD/kg]')].values[bin_indices] # using the relevant bin indices, create a list of indicator values.  .loc[:,('TEA', 'IRR [%]')]
-            mean_output_parameter_binned.append(np.mean(bin_data)) # take the mean of the indicator values for this bin
-            std_output_parameter_binned.append(np.std(bin_data)) # take the SD of the indicator values for this bin
-        # Smooth the data using cubic spline interpolation 
-        # Note: interp fills the gap between 'lower'/smallest 'bin_center' and 'upper'/higher 'bin_center' leading to a small 'flatline' at either end of plot. Can be minimized with more bins.
-        smooth_x_values = np.linspace(lower, upper, num=1000)  # Increase the number of points for smooth curves
-        mean_interpolator = np.interp(smooth_x_values, bin_centers, mean_output_parameter_binned)
-        std_interpolator = np.interp(smooth_x_values, bin_centers, std_output_parameter_binned)
-
-        # Create the line plot with uncertainty using plot and fill_between
-        plt.style.use('default')
-        fig2, ax2 = plt.subplots()
-        ax2.plot(smooth_x_values, mean_interpolator, color='#f98f60', label='Mean NPV15')
-        ax2.fill_between(smooth_x_values, mean_interpolator - 2*std_interpolator, mean_interpolator + 2*std_interpolator, color='#f98f60', alpha=0.3, label='Confidence Interval (95%)')
-        # Add labels and title
-        ax2.set(xlabel=f'{p_name} ({p_units})', ylabel='NPV15 (MM USD)', xlim=(lower,upper))
-        ax2.grid(visible=True)
-        ax2.ticklabel_format(axis='x', style='scientific', scilimits=(-3,-2))
-        # Show the legend
-        ax2.legend(loc='upper left')
-        ax2.xaxis.major.formatter._useMathText = True
-        fig2.tight_layout()
-        # Save the plot
-        fig2.savefig(os.path.join(figures_path, f'Target_{p_name}.tiff'), dpi=600)
-
-
-        # # Target 2
-        # # --------------------------
-        # sys, lca, tea= create_system(fununit=fununit, feedPG=feedPG, REEcontent=REEcontent, num_ind_REEs=num_ind_REEs)
-        # target = 'REE Recovery (S1)'
-        # model = create_model(sys, fununit, 'all', target=target) # set system, functional unit, and type of parameter for analysis
-
-        # np.random.seed(3221) # setting the seed ensures you get the same sample
-
-        # samples = model.sample(N=num_samples, rule='L')
-        # model.load_samples(samples)
-        # model.evaluate()
-
-        # # Define parameter of interest
-        # p_name = target
-        # ind_parameter = [i.name for i in model._parameters].index(p_name)
-        # p_units = model._parameters[ind_parameter].units
-        
-        # # Define range of parameter
-        # lower = model._parameters[ind_parameter].distribution.lower[0]
-        # upper = model._parameters[ind_parameter].distribution.upper[0]
-        # num_bins = 65
-        
-        # # Define the bin width and make a list of bin centers
-        # bin_width = (upper-lower)/num_bins
-        # bin_centers = np.linspace(lower + bin_width/2, upper - bin_width/2, num=int((upper - lower) / bin_width))
-        # mean_output_parameter_binned = []
-        # std_output_parameter_binned = []
-
-        # # Gather the mean and standard deviation for each bin from the model results
-        # for bin_center in bin_centers:
-        #     bin_start = bin_center - bin_width/2
-        #     bin_end = bin_center + bin_width/2
-        #     bin_indices = np.logical_and(model.table.loc[:, (model._parameters[ind_parameter].element, f'{p_name} [{p_units}]')].values >= bin_start, 
-        #                                 model.table.loc[:, (model._parameters[ind_parameter].element, f'{p_name} [{p_units}]')].values < bin_end) # Gather indices of the parameter values within the bin
-        #     bin_data = model.table.loc[:,('TEA', 'NPV15 [MM USD/kg]')].values[bin_indices] # using the relevant bin indices, create a list of indicator values.  .loc[:,('TEA', 'IRR [%]')]
-        #     mean_output_parameter_binned.append(np.mean(bin_data)) # take the mean of the indicator values for this bin
-        #     std_output_parameter_binned.append(np.std(bin_data)) # take the SD of the indicator values for this bin
-        # # Smooth the data using cubic spline interpolation 
-        # # Note: interp fills the gap between 'lower'/smallest 'bin_center' and 'upper'/higher 'bin_center' leading to a small 'flatline' at either end of plot. Can be minimized with more bins.
-        # smooth_x_values = np.linspace(lower, upper, num=1000)  # Increase the number of points for smooth curves
-        # mean_interpolator = np.interp(smooth_x_values, bin_centers, mean_output_parameter_binned)
-        # std_interpolator = np.interp(smooth_x_values, bin_centers, std_output_parameter_binned)
-
-        # # Create the line plot with uncertainty using plot and fill_between
-        # plt.style.use('default')
-        # fig, ax = plt.subplots()
-        # ax.plot(smooth_x_values, mean_interpolator, color='#f98f60', label='Mean NPV15')
-        # ax.fill_between(smooth_x_values, mean_interpolator - 2*std_interpolator, mean_interpolator + 2*std_interpolator,color='#f98f60', alpha=0.3, label='Confidence Interval (95%)')
-        # # Add labels and title
-        # ax.set(xlabel=f'{p_name} ({p_units})', ylabel='NPV15 (MM USD)', xlim=(lower,upper))
-        # ax.grid(visible=True)
-        # ax.ticklabel_format(axis='x', style='sci')
-        # # Show the legend
-        # fig.tight_layout()
-        # ax.legend(loc='upper left')
-        # # Save the plot
-        # fig.savefig(os.path.join(figures_path, f'Target_{p_name}.tiff'), dpi=600)
-
-    return feedPG, REEcontent, tea.solve_price(fs_stream.Ln2O3)
+    return print('-----analysis complete-----')
 
 
 run_analysis(fununit='PG', feedPG=1000000, REEcontent=0.5/100, num_ind_REEs=9,
-             report='yes', num_samples=500, uncertainty='no', sensitivity='no', parameter='technological', optimization='no', desire_target='no')
+             report='no', 
+             num_samples=300, uncertainty='no', sensitivity='no', parameter='technological', 
+             optimization='no', 
+             desire_target='no', 
+             desire_scenario='no')
 
-# # Scenario Analysis
-# x = np.linspace(0.02/100, 0.9/100, 20) # wt fraction. REE content
-# y = np.linspace(0.1*1e6, 2*1e6, 20) # M kg/hr. capacity
-
-# resultCapacity = []
-# resultREEContent = []
-# resultMSP = []
-# for i in x:
-#     for j in y:
-#         dataCapacity, dataREEContent, dataMSP = run_analysis(fununit='PG', feedPG= j, REEcontent= i, num_ind_REEs=9,
-#              report='no', num_samples=1, uncertainty='no', sensitivity='no', parameter='technological', optimization='no', desire_target='no')
-#         resultCapacity.append(dataCapacity)
-#         resultREEContent.append(dataREEContent)
-#         resultMSP.append(dataMSP)
-
-# X, Y = np.meshgrid(x*100, y/1e6)
-# Z = np.array(resultMSP).reshape(len(y),len(y)).T
-
-# plt.style.use('default')
-# aspect_ratio_LtoW = 2880/3840
-# cm_to_in = 1/2.54  # centimeters in inches
-# width_one_col = 8.3 # cm. Width for a one column figure
-# width_two_col = 17.1 # cm. Width for a two column figure
-# max_length = 23.3 # cm. The maximum lenght a figure can be
-# fig, ax = plt.subplots(figsize=(width_one_col*cm_to_in, width_one_col*aspect_ratio_LtoW*cm_to_in))
-# cp = plt.contourf(X,Y,Z, levels=np.linspace(0,400,30), cmap='inferno_r', extend='max')
-# fig.colorbar(cp, label=f'MSP ($/kg REO)', ticks=np.arange(0,370,60)) 
-
-# cp2 = plt.contour(X,Y,Z, levels=[51.5, 51.5*2], colors='black', linestyles='dashed')
-# fmt = {}
-# strs = [' MSP  51.5 ', ' MSP  103 '] 
-# for l, s in zip(cp2.levels, strs):
-#     fmt[l] = s
-# ax.clabel(cp2, inline=True, fmt=fmt)
-
-# ax.set(xlabel='REE Content of the PG (wt %)', ylabel='Capacity (M kg PG/hr)')
-# fig.tight_layout()
-# fig.savefig(os.path.join(figures_path, f'Scenario_analysis.tiff'), dpi=600)
