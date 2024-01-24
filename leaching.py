@@ -1,8 +1,9 @@
 """
-Phosphogypsum Rare Earth Element Recovery System (PREERS)
+Rare Earth Element recovery from Phosphogypsum System (REEPS)
 
 The Pennsylvania State University
 Chemical Engineering Department
+S2D2 Lab (Dr. Rui Shi)
 @author: Adam Smerigan
 """
 # %%

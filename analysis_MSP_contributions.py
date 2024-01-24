@@ -62,18 +62,23 @@ def analysis_MSP_contributions(sys, tea, fs_stream, fs_unit, fununit, lca_result
     custom_colors = ['#82cfd0', '#403a48', '#fcb813', '#007f3d', '#8ead3e', '#3ba459'] # order of legend VOC, credit, FOC, cap deprec., tax, ROI
 
     # Create figures the correct size for publication
-    aspect_ratio_LtoW = 6/4
+    aspect_ratio_LtoW = 1
     cm_to_in = 1/2.54  # centimeters in inches
     width_one_col = 8.3 # cm. Width for a one column figure
     width_two_col = 17.1 # cm. Width for a two column figure
     max_length = 23.3 # cm. The maximum lenght a figure can be
 
     plt.style.use('default')
-    fig, ax = plt.subplots(figsize=(width_one_col*cm_to_in, width_one_col*aspect_ratio_LtoW*cm_to_in))
+    # Manually change the text font and size
+    plt.style.use('default')
+    font = {'family': 'Calibri', 'size': 8}
+    plt.rc('font', **font)
+
+    fig, ax = plt.subplots(figsize=(width_one_col*cm_to_in/2, width_one_col*aspect_ratio_LtoW*cm_to_in))
     ax = MSP_table.drop('MSP', axis=0).T.plot(kind='bar', stacked=True, color=custom_colors, ax=ax)
     # Set labels and title
     ax.set_ylabel('Minimum Selling Price (USD/kg REO)')
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1) ) # , ncol=len(combined_df.index)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.6) ) # , ncol=len(combined_df.index)
     ax.axhline(y=0, color='black', linewidth=0.8)
     fig.tight_layout()
     # Show the plot
@@ -131,8 +136,10 @@ def analysis_MSP_contributions(sys, tea, fs_stream, fs_unit, fununit, lca_result
     # green 3ba459
     # orange fcb813
     # brown 98876e
-    # gray 403a48
-    custom_colors = ['#82cfd0', '#98876e', '#403a48', '#fcb813', '#3ba459']
+    # gray 90918e
+    # dark gray 403a48
+    # dark blue 8790f5
+    custom_colors = ['#82cfd0', '#8790f5', '#90918e', '#fcb813', '#3ba459']
 
     aspect_ratio_LtoW = 1.5 # Length/Width
     fig, ax = plt.subplots(figsize=(width_one_col*cm_to_in, width_one_col*aspect_ratio_LtoW*cm_to_in))
@@ -183,8 +190,8 @@ def analysis_MSP_contributions(sys, tea, fs_stream, fs_unit, fununit, lca_result
     testing_table = testing_table.sort_index().multiply(100/np.abs(testing_table).sum()) # rescale the values so that the absolute value of the indicator sums to 100%
     indicator_contributions['Minimum Selling Price'] = testing_table # add the scaled MSP values to the scaled LCA values for plotting
     if fununit == 'PG':
-        indicator_contributions = indicator_contributions.reindex(['Leaching', 'Concentration', 'Separation', 'Refining', 'Wastewater Treatment','Gypsum Credit', 'REO Credit']) # put the df in order so that it plots nicely
-    else:
+        indicator_contributions = indicator_contributions.reindex(['Leaching', 'Concentration', 'Separation', 'Refining', 'Wastewater Treatment','Gypsum Credit', 'REO Credit', 'PG Credit']) # put the df in order so that it plots nicely
+    elif fununit == 'Ln':
         indicator_contributions = indicator_contributions.reindex(['Leaching', 'Concentration', 'Separation', 'Refining', 'Wastewater Treatment','Gypsum Credit', 'PG Credit']) # put the df in order so that it plots nicely
 
     # Create a stacked bar chart
@@ -196,26 +203,34 @@ def analysis_MSP_contributions(sys, tea, fs_stream, fs_unit, fununit, lca_result
     # gray 90918e
     # yellow f3c354
     # black 403a48
-    custom_colors = ['#f1777f', '#60c1cf', '#79bf82', '#f98f60', '#a280b9', '#90918e', '#403a48', '#403a48']
+    if fununit == 'PG':
+        custom_colors = ['#f1777f', '#60c1cf', '#79bf82', '#f98f60', '#a280b9', '#90918e', '#966b6b']
+    elif fununit == 'Ln':
+        custom_colors = ['#f1777f', '#60c1cf', '#79bf82', '#f98f60', '#a280b9', '#90918e', '#403a48', '#98876e']
 
-    aspect_ratio_LtoW = 1 # 6/10
-    fig, ax = plt.subplots(figsize=(width_two_col*cm_to_in, width_two_col*aspect_ratio_LtoW*cm_to_in)) # Matplotlib wants input in inches (width, length/height)
-    ax = indicator_contributions.T.plot(kind='bar', stacked=True, color=custom_colors, ax=ax)
+    aspect_ratio_LtoW = 1.25 # 6/10
+    # Manually change the text font and size
+    font = {'family': 'Calibri', 'size': 8}
+    plt.rc('font', **font)
+
+    fig, ax = plt.subplots(figsize=(width_one_col*cm_to_in, width_one_col*aspect_ratio_LtoW*cm_to_in)) # Matplotlib wants input in inches (width, length/height)
+    indicator_contributions.T.plot(kind='barh', stacked=True, color=custom_colors, ax=ax)
 
     # Set labels and title
-    ax.set_ylabel('Contribution to Indicator (%)')
-    ax.set_ylim(-100,100)
+    ax.set_xlabel('Contribution to Indicator (%)')
+    ax.set_xlim(-100,100)
     # ax.set_xticklabels(ax.get_xticklabels(), rotation=55, ha='right')
-    ax.axhline(y=0, color='black', linewidth=0.8)
+    ax.axvline(x=0, color='black', linewidth=0.8)
     #get handles and labels
     handles, labels = plt.gca().get_legend_handles_labels()
     #specify order of items in legend
     order = [0, 1, 2, 3, 4, 5, 6] # Controls the order of process sections in the figure legend. Each number corresponds to a process section
     #add legend to plot
     ax.legend().remove()  # This removes the default legend
-    fig.legend([handles[idx] for idx in order],[labels[idx] for idx in order], loc=9, ncol = 4) # , bbox_to_anchor=(1.45, 0.75)
+
+    fig.legend([handles[idx] for idx in order],[labels[idx] for idx in order], loc=9, ncol = 2) # , bbox_to_anchor=(1.45, 0.75)
     fig.tight_layout() # rect=[0, 0, 0.95, 1]
-    fig.subplots_adjust(top=0.9)
+    fig.subplots_adjust(top=0.8)
     # Show the plot
     fig.savefig(os.path.join(figures_path, f'Indicator_Contributions_{fununit}.tiff'), dpi=600)
     return MSP_table, MSP_unit_table, indicator_contributions

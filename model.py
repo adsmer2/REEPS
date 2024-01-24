@@ -353,13 +353,13 @@ def create_model(sys, fununit, parameter, target):
 
     # Economic
     # -----------
-    @metric(name='NPV15', units='MM USD/kg', element='TEA')
+    @metric(name='NPV15', units='MM USD', element='TEA')
     def get_NPV():
         return tea.NPV/1000000
 
     @metric(name='IRR', units='%', element='TEA')
     def get_IRR():
-        return tea.solve_IRR()
+        return tea.solve_IRR()*100
         
     @metric(name='MSP', units='USD/kg REO', element='TEA')
     def get_MSP():
@@ -367,7 +367,7 @@ def create_model(sys, fununit, parameter, target):
 
     # Environmental
     # -----------
-    @metric(name='Global Warming', units=f'kg CO2-Eq/kg {fununit}', element='LCA')
+    @metric(name='Global Warming', units=f'kg CO\u2082-Eq/kg {fununit}', element='LCA')
     def get_annual_GWP100():
         if fununit == 'Ln':
             return lca.total_impacts['GWP100']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
@@ -378,7 +378,7 @@ def create_model(sys, fununit, parameter, target):
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Urban Land Occupation', units=f'square meter-year/kg {fununit}', element='LCA')
+    @metric(name='Urban Land Occupation', units=f'm\u00B2-year/kg {fununit}', element='LCA')
     def get_annual_ULOP():
         if fununit == 'Ln':
             return lca.total_impacts['ULOP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
@@ -389,7 +389,7 @@ def create_model(sys, fununit, parameter, target):
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Agricultural Land Occupation', units=f'square meter-year/kg {fununit}', element='LCA')
+    @metric(name='Ag. Land Occupation', units=f'm\u00B2-year/kg {fununit}', element='LCA')
     def get_annual_ALOP():
         if fununit == 'Ln':
             return lca.total_impacts['ALOP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
@@ -444,7 +444,7 @@ def create_model(sys, fununit, parameter, target):
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Freshwater Eutrophication', units=f'kg P-Eq/kg {fununit}', element='LCA')
+    @metric(name='Freshwater Eut.', units=f'kg P-Eq/kg {fununit}', element='LCA')
     def get_annual_FEP():
         if fununit == 'Ln':
             return lca.total_impacts['FEP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
@@ -455,7 +455,7 @@ def create_model(sys, fununit, parameter, target):
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Terrestrial Acidification', units=f'kg SO2-Eq/kg {fununit}', element='LCA')
+    @metric(name='Terrestrial Acidification', units=f'kg SO\u2082-Eq/kg {fununit}', element='LCA')
     def get_annual_TAP100():
         if fununit == 'Ln':
             return lca.total_impacts['TAP100']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
@@ -477,7 +477,7 @@ def create_model(sys, fununit, parameter, target):
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Ionising Radiation', units=f'kg U235-Eq/kg {fununit}', element='LCA')
+    @metric(name='Ionising Radiation', units=f'kg U_{235}$-Eq/kg {fununit}', element='LCA')
     def get_annual_IRP_HE():
         if fununit == 'Ln':
             return lca.total_impacts['IRP_HE']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
@@ -510,7 +510,7 @@ def create_model(sys, fununit, parameter, target):
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Natural Land Transformation', units=f'square meter/kg {fununit}', element='LCA')
+    @metric(name='Natural Land Transformation', units=f'm\u00B2/kg {fununit}', element='LCA')
     def get_annual_NLTP():
         if fununit == 'Ln':
             return lca.total_impacts['NLTP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
@@ -554,7 +554,7 @@ def create_model(sys, fununit, parameter, target):
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Water Depletion', units=f'm3 water-Eq/kg {fununit}', element='LCA')
+    @metric(name='Water Depletion', units=f'm\u00B3 water-Eq/kg {fununit}', element='LCA')
     def get_annual_WDP():
         if fununit == 'Ln':
             return lca.total_impacts['WDP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)

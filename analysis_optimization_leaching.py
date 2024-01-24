@@ -3,6 +3,7 @@ import scipy as scp
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib
 import qsdsan as qs
 import biosteam as bst
 import os
@@ -135,10 +136,24 @@ def analysis_optimization_leaching(system, fununit, xdata, ydata, f1data, f2data
     Z = np.array(result).reshape(len(y),len(y)).T
 
     plt.style.use('default')
-    fig, ax = plt.subplots()
+    aspect_ratio_LtoW = 2880/3840
+    cm_to_in = 1/2.54  # centimeters in inches
+    width_one_col = 8.3 # cm. Width for a one column figure
+    width_two_col = 17.1 # cm. Width for a two column figure
+    max_length = 23.3 # cm. The maximum lenght a figure can be
+    fig, ax = plt.subplots(figsize=(width_one_col*cm_to_in, width_one_col*aspect_ratio_LtoW*cm_to_in))
+
     cp = plt.contourf(X,Y,Z, 20, cmap=ind_cmap)
-    fig.colorbar(cp, label=ind_axis_label)
+    colorbar = fig.colorbar(cp, label=ind_axis_label)
+    # Limit the number of ticks
+    num_ticks = 5
+    colorbar.locator = matplotlib.ticker.MaxNLocator(nbins=num_ticks)
+    # Update the colorbar with the new locator
+    colorbar.update_ticks()
+
     ax.set(xlabel=xlabel, ylabel=ylabel)
+    fig.tight_layout()
+
     fig.savefig(os.path.join(figures_path, f'leaching_{xdata}_{ydata}_{indicator}_{fununit}.tiff'), dpi=600)
 
     qs.Model._reset_system(model)
