@@ -589,12 +589,34 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
     # -------------------------
     if uncertainty == 'yes':
         model_uncertainty = analysis_uncertainty(sys, fununit, num_samples, figures_path)
+        
+        # Print uncertainty results to Excel file
+        writer_uncertainty = pd.ExcelWriter(os.path.join(results_path, f'{sys.ID}_uncertainty_{fununit}_{feedPG}_{REEcontent}_{num_ind_REEs}.xlsx'))
+        uncertainty_results = model_uncertainty.table
+        uncertainty_baseline = model_uncertainty.metrics_at_baseline()
+        with writer_uncertainty as writer:
+            uncertainty_results.to_excel(writer, sheet_name="Model Results")  
+            uncertainty_baseline.to_excel(writer, sheet_name="Model Baseline") 
+
         qs.Model._reset_system(model_uncertainty)
 
     # Sensitivity Analysis
     # -------------------------
     if sensitivity == 'yes':
         model_sensitivity = analysis_sensitivity(sys, fununit, parameter, num_samples, figures_path)
+
+        writer_sensitivity = pd.ExcelWriter(os.path.join(results_path, f'{sys.ID}_sensitivity_{parameter}_{fununit}_{feedPG}_{REEcontent}_{num_ind_REEs}.xlsx'))
+        sensitivity_results = model_sensitivity.table
+        sensitivity_baseline = model_sensitivity.metrics_at_baseline()
+        spearman_results_r, spearman_results_p = qs.stats.get_correlations(model_sensitivity, kind='Spearman')
+        with writer_sensitivity as writer:
+            sensitivity_results.to_excel(writer, sheet_name="Model Results")  
+            sensitivity_baseline.to_excel(writer, sheet_name="Model Baseline")
+            spearman_results_r.to_excel(writer, sheet_name="Spearman Correlations")
+            spearman_results_p.to_excel(writer, sheet_name="Spearman pvalues")
+
+
+
         if parameter == 'technological':
             analysis_indicator_trend(model_sensitivity, 'Acid Concentration (U1)', figures_path=figures_path) # input parameter name as it appears in model.py @param()
             analysis_indicator_trend(model_sensitivity, 'Solvent to Solid Ratio (U1)', figures_path=figures_path)
@@ -629,7 +651,9 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
 
 run_analysis(fununit='PG', feedPG=1000000, REEcontent=0.5/100, num_ind_REEs=9,
              report='no', 
-             num_samples=300, uncertainty='no', sensitivity='no', parameter='technological', 
+             num_samples=3000,
+             uncertainty='no', 
+             sensitivity='yes', parameter='technological', 
              optimization='no', 
              desire_target='no', 
              desire_scenario='no')
