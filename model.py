@@ -369,200 +369,200 @@ def create_model(sys, fununit, parameter, target):
     # -----------
     @metric(name='Acidification Terrestrial', units=f'kg SO\u2082-Eq/kg {fununit}', element='LCA')
     def get_annual_TAP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['TAP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['TAP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['TAP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Climate Change', units=f'kg CO\u2082-Eq/kg {fununit}', element='LCA')
     def get_annual_GWP100():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['GWP1000']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['GWP1000']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['GWP1000']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Ecotoxicity Freshwater', units=f'kg 1,4-DCB-Eq/kg {fununit}', element='LCA')
     def get_annual_FETP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['FETP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['FETP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['FETP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Ecotoxicity Marine', units=f'kg 1,4-DCB-Eq/kg {fununit}', element='LCA')
     def get_annual_METP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['METP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['METP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['METP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Ecotoxicity Terrestrial', units=f'kg 1,4-DCB-Eq/kg {fununit}', element='LCA')
     def get_annual_TETP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['TETP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['TETP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['TETP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Energy Resources', units=f'kg oil-Eq/kg {fununit}', element='LCA')
     def get_annual_FFP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['FFP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['FFP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['FFP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Eutroph. Freshwater', units=f'kg P-Eq/kg {fununit}', element='LCA')
     def get_annual_FEP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['FEP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['FEP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['FEP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Eutroph. Marine', units=f'kg P-Eq/kg {fununit}', element='LCA')
     def get_annual_MEP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['MEP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['MEP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['MEP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Human Toxicity Carc.', units=f'kg 1,4-DCB-Eq/kg {fununit}', element='LCA')
     def get_annual_HTPc():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['HTPc']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['HTPc']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['HTPc']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Human Toxicity N-carc.', units=f'kg 1,4-DCB-Eq/kg {fununit}', element='LCA')
     def get_annual_HTPnc():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['HTPnc']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['HTPnc']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['HTPnc']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Ionising Radiation', units=f'kBq Co-60-Eq/kg {fununit}', element='LCA')
     def get_annual_IRP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['IRP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['IRP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['IRP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Land Use', units=f'm\u00B2*a crop-Eq/kg {fununit}', element='LCA')
     def get_annual_LOP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['LOP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['LOP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['LOP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Meterial Resources', units=f'kg Cu-Eq/kg {fununit}', element='LCA')
     def get_annual_SOP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['SOP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['SOP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['SOP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Ozone Depletion', units=f'kg CFC-11-Eq/kg {fununit}', element='LCA')
     def get_annual_ODPinfinite():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['ODPinfinite']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['ODPinfinite']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['ODPinfinite']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Particulate Matter', units=f'kg PM2.5-Eq/kg {fununit}', element='LCA')
     def get_annual_PMFP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['PMFP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['PMFP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['PMFP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Photochemical Ox. Human Health', units=f'kg NOx-Eq/kg {fununit}', element='LCA')
     def get_annual_HOFP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['HOFP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['HOFP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['HOFP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Photochemical Ox. Ecosystems', units=f'kg NOx-Eq/kg {fununit}', element='LCA')
     def get_annual_EOFP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['EOFP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['EOFP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['EOFP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
         
     @metric(name='Water Use', units=f'cubic meter/kg {fununit}', element='LCA')
     def get_annual_WCP():
-        if fununit == 'Ln':
+        if fununit == 'REO':
             return lca.total_impacts['WCP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
             return lca.total_impacts['WCP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
             return lca.total_impacts['WCP']
         else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+            raise NameError(f'For model metric, {fununit} is not "REO" or "PG"')
 
     return model

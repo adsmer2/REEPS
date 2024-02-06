@@ -66,7 +66,7 @@ _load_lca_data() # Generates impact items that can be linked to flows in/out of 
 # Function that creates and simulates the system along with the corresponding TEA and LCA results
 def create_system(fununit, feedPG, REEcontent, num_ind_REEs):
     """
-    fununit = 'PG' # functional unit of interest (PG, Ln, or none)
+    fununit = 'PG' # functional unit of interest (PG, REO, or none)
 
     feedPG = 1000000 #amount of PG being leached (kg/hr)
 
@@ -100,7 +100,7 @@ def create_system(fununit, feedPG, REEcontent, num_ind_REEs):
     if fununit == 'PG': # functional unit of 1 metric ton of PG remediated
         qs.SanStream('Ln2O3', stream_impact_item=Nd_item, price=Nd_price) # this fununit gets a credit for the REO product produced while treating the PG waste
         qs.SanStream('rawPG')
-    elif fununit == 'Ln': # functional unit of 1 kg of REO produced
+    elif fununit == 'REO': # functional unit of 1 kg of REO produced
         qs.SanStream('Ln2O3', price=Nd_price)
         qs.SanStream('rawPG', stream_impact_item=PGstack_item) # this fununit gets a credit for removing the need for stack treatment of PG while producing REOs
     elif fununit == 'none': # no functional unit (system with no credits)

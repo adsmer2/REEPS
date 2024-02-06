@@ -537,9 +537,9 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
 
         # make a final summary table for lca results
         # -------------------------------------------
-        lca_ind = ['PG Feed Flow', 'Ln2O3 Product Flow', 'Total GW ReCiPe/PG', 'Total GW ReCiPe/Ln']
+        lca_ind = ['PG Feed Flow', 'Ln2O3 Product Flow', 'Total GW ReCiPe/PG', 'Total GW ReCiPe/REO']
         lca_value = [fs_stream.rawPG.F_mass, fs_stream.Ln2O3.F_mass, lca.total_impacts['GWP1000']/(fs_stream.rawPG.F_mass*tea.operating_days*24), lca.total_impacts['GWP1000']/(fs_stream.Ln2O3.F_mass*tea.operating_days*24)]
-        lca_unit = ['kg/hr', 'kg/hr', 'kg CO2-eq/kg PG. Note: not accurate unless the correct functional unit is chosen', 'kg CO2-eq/kg Ln. Note: not accurate unless the correct functional unit is chosen']
+        lca_unit = ['kg/hr', 'kg/hr', 'kg CO2-eq/kg PG. Note: not accurate unless the correct functional unit is chosen', 'kg CO2-eq/kg REO. Note: not accurate unless the correct functional unit is chosen']
         lca_final_table = pd.DataFrame(list(zip(lca_value, lca_unit)))
         lca_final_table.columns = ['Value','Unit']
         lca_final_table.index = lca_ind
@@ -646,10 +646,10 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
     return print('-----analysis complete-----')
 
 
-run_analysis(fununit='Ln', feedPG=1000000, REEcontent=0.5/100, num_ind_REEs=9,
-             report='yes', 
+run_analysis(fununit='PG', feedPG=1000000, REEcontent=0.5/100, num_ind_REEs=9,
+             report='no', 
              num_samples=3000,
-             uncertainty='no', 
+             uncertainty='yes', 
              sensitivity='no', parameter='contextual', 
              optimization='no', 
              desire_target='no', 

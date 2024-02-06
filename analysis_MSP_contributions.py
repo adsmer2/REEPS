@@ -216,7 +216,7 @@ def analysis_MSP_contributions(sys, tea, fs_stream, fs_unit, fununit, lca_result
     indicator_contributions['Minimum Selling Price'] = testing_table # add the scaled MSP values to the scaled LCA values for plotting
     if fununit == 'PG':
         indicator_contributions = indicator_contributions.reindex(['Leaching', 'Concentration', 'Separation', 'Refining', 'Wastewater Treatment','Gypsum Credit', 'REO Credit', 'PG Credit']) # put the df in order so that it plots nicely
-    elif fununit == 'Ln':
+    elif fununit == 'REO':
         indicator_contributions = indicator_contributions.reindex(['Leaching', 'Concentration', 'Separation', 'Refining', 'Wastewater Treatment','Gypsum Credit', 'PG Credit']) # put the df in order so that it plots nicely
 
     # Create a stacked bar chart
@@ -230,7 +230,7 @@ def analysis_MSP_contributions(sys, tea, fs_stream, fs_unit, fununit, lca_result
     # black 403a48
     if fununit == 'PG':
         custom_colors = ['#f1777f', '#60c1cf', '#79bf82', '#f98f60', '#a280b9', '#90918e', '#966b6b']
-    elif fununit == 'Ln':
+    elif fununit == 'REO':
         custom_colors = ['#f1777f', '#60c1cf', '#79bf82', '#f98f60', '#a280b9', '#90918e', '#403a48', '#98876e']
 
     aspect_ratio_LtoW = 1.25 # 6/10
