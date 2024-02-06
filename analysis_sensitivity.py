@@ -22,7 +22,7 @@ def analysis_sensitivity(sys, fununit, parameter, num_samples, figures_path):
     model_sensitivity.load_samples(samples)
     model_sensitivity.evaluate()
     r_df, p_df = qs.stats.get_correlations(model_sensitivity, kind='Spearman')
-
+    
     # sort the parameters by alphabetically by unit ID then parameter name
     lst1 = [i.element for i in model_sensitivity.get_parameters()]
     lst2 = [i.name for i in model_sensitivity.get_parameters()]
@@ -88,6 +88,15 @@ def analysis_sensitivity(sys, fununit, parameter, num_samples, figures_path):
     if parameter == 'contextual':
         corr_df2 = corr_df2[~corr_df2['metric'].isin(metric_names[3:])] 
         pivot_corr_df = corr_df2.pivot(index="parameter", columns="metric", values="Correlation")
+        pivot_corr_df = pivot_corr_df.reindex(columns=['MSP',
+        'NPV15',
+        'IRR',
+        ])
+        columns = ['Minimum Selling Price',
+        'Net Present Value',
+        'Internal Rate of Return'
+        ]
+        pivot_corr_df.columns = columns
 
     if parameter == 'technological':
         # List of exceptions
@@ -100,36 +109,74 @@ def analysis_sensitivity(sys, fununit, parameter, num_samples, figures_path):
 
         pivot_corr_df = corr_df2.pivot(index="parameter", columns="metric", values="Correlation")
         pivot_corr_df = pivot_corr_df.sort_index(key=lambda x: [i.split('(')[1] for i in x])
-        pivot_corr_df = pivot_corr_df.reindex(columns=['Ag. Land Occupation',
-        'Fossil Depletion',
-        'Freshwater Ecotoxicity',
-        'Freshwater Eut.',
-        'Global Warming',
-        'Human Toxicity',
+        # Need to put the categories in the correct order for plotting
+        pivot_corr_df = pivot_corr_df.reindex(columns=['MSP',
+        'Acidification Terrestrial',
+        'Climate Change',
+        'Ecotoxicity Freshwater',
+        'Ecotoxicity Marine',
+        'Ecotoxicity Terrestrial',
+        'Energy Resources',
+        'Eutroph. Freshwater',
+        'Eutroph. Marine',
+        'Human Toxicity Carc.',
+        'Human Toxicity N-Carc.', # watch out for capitalization after punctuation
         'Ionising Radiation',
-        'Marine Ecotoxicity',
-        'Marine Eutrophication',
-        'Metal Depletion',
-        'Natural Land Transformation',
+        'Land Use',
+        'Meterial Resources',
         'Ozone Depletion',
-        'Particulate Matter Formation',
-        'Photochemical Oxidant Formation',
-        'Terrestrial Acidification',
-        'Terrestrial Ecotoxicity',
-        'Urban Land Occupation',
-        'Water Depletion',
+        'Particulate Matter',
+        'Photochemical Ox. Human Health',
+        'Photochemical Ox. Ecosystems',
+        'Water Use',
         'NPV15',
-        'IRR',
-        'MSP'])
+        'IRR'
+        ])
+        pivot_corr_df.drop(['NPV15','IRR'], inplace=True, axis=1)
+        columns = ['Minimum Selling Price',
+        'Acidification Terrestrial',
+        'Climate Change',
+        'Ecotoxicity Freshwater',
+        'Ecotoxicity Marine',
+        'Ecotoxicity Terrestrial',
+        'Energy Resources',
+        'Eutroph. Freshwater',
+        'Eutroph. Marine',
+        'Human Toxicity Carc.',
+        'Human Toxicity N-Carc.', # watch out for capitalization after punctuation
+        'Ionising Radiation',
+        'Land Use',
+        'Meterial Resources',
+        'Ozone Depletion',
+        'Particulate Matter',
+        'Photochemical Ox. Human Health',
+        'Photochemical Ox. Ecosystems',
+        'Water Use'
+        ]
+        pivot_corr_df.columns = columns
+        
 
     # Manually change the text font and size
     plt.style.use('default')
     font = {'family': 'Calibri', 'size': 8}
     plt.rc('font', **font)
 
-    fig, ax = plt.subplots()
-    sns.heatmap(data=pivot_corr_df.T, vmin = -1, vmax=1, cmap=sns.diverging_palette(356, 200, s=80, l=50, as_cmap=True))
+    # if parameter == 'technological':
+    #     fig, ax = plt.subplots(figsize=(6.73, 6.73*0.8))
+    #     sns.heatmap(data=pivot_corr_df.T, vmin = -1, vmax=1, cmap=sns.diverging_palette(356, 200, s=80, l=50, as_cmap=True))
+    # if parameter == 'contextual':
+    #     fig, ax = plt.subplots(figsize=(6.73*0.82, 6.73*0.4))
+    #     sns.heatmap(data=pivot_corr_df.T, vmin = -1, vmax=1, cmap=sns.diverging_palette(356, 200, s=80, l=50, as_cmap=True))
+
+    if parameter == 'technological':
+        fig, ax = plt.subplots(figsize=(6.73, 6.73*0.8))
+        sns.heatmap(data=pivot_corr_df.T, vmin = -1, vmax=1, cmap=sns.diverging_palette(220, 356, s=90, l=60, as_cmap=True))
+    if parameter == 'contextual':
+        fig, ax = plt.subplots(figsize=(6.73*0.95, 6.73*0.4))
+        sns.heatmap(data=pivot_corr_df.T, vmin = -1, vmax=1, cmap=sns.diverging_palette(220, 356, s=90, l=60, as_cmap=True))
+
     ax.set(xlabel='', ylabel='')
+    ax.tick_params(axis='y', labelrotation=0)
     fig.tight_layout()
     fig.savefig(os.path.join(figures_path, f'Sensitivity_heatmap_{parameter}_{fununit}_FULL.tiff'), dpi=600)
 

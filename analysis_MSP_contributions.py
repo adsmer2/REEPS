@@ -138,8 +138,13 @@ def analysis_MSP_contributions(sys, tea, fs_stream, fs_unit, fununit, lca_result
     # brown 98876e
     # gray 90918e
     # dark gray 403a48
-    # dark blue 8790f5
-    custom_colors = ['#82cfd0', '#8790f5', '#90918e', '#fcb813', '#3ba459']
+    # dark blue 5973a6
+    custom_colors = ['#82cfd0', '#5973a6', '#90918e', '#fcb813', '#3ba459']
+
+    # Manually change the text font and size
+    plt.style.use('default')
+    font = {'family': 'Calibri', 'size': 11}
+    plt.rc('font', **font)
 
     aspect_ratio_LtoW = 1.5 # Length/Width
     fig, ax = plt.subplots(figsize=(width_one_col*cm_to_in, width_one_col*aspect_ratio_LtoW*cm_to_in))
@@ -162,10 +167,31 @@ def analysis_MSP_contributions(sys, tea, fs_stream, fs_unit, fununit, lca_result
     # round(tea.utility_cost/1000000,6) == round(feed_utility_table.loc[:,'Utility Cost'].sum()/1000000,6) # Confirm Utility Cost
     # MSP_full_table.sum().sum() == MSP # Confirm overall MSP total
 
-    lca_stream_table, lca_other_table, lca_unit_result, lca_final_table = lca_results()
+    lca_overall_table, lca_stream_table, lca_other_table, lca_unit_result, lca_final_table = lca_results()
     lca_unit_result_sums = np.abs(lca_unit_result).sum()
-    lca_unit_result.drop('Human Health', inplace=True, axis=1) # Gets rid of duplicate EI-99 LCIA result for GW
     lca_contributions = lca_unit_result.apply(lambda col: col*100 / lca_unit_result_sums[col.name], axis=0) # rescale the values so that the absolute value of the indicator sums to 100%
+    lca_contributions = lca_contributions.sort_index(axis=1) # force the category names to be in the same order every time
+    lca_contributions.columns = [
+    'Photochemical Ox. Ecosystems',
+    'Eutroph. Freshwater',
+    'Ecotoxicity Freshwater',
+    'Energy Resources',
+    'Climate Change', 
+    'Photochemical Ox. Human Health',
+    'Human Toxicity Carc.',
+    'Human Toxicity N-carc.',
+    'Ionising Radiation',
+    'Land Use',
+    'Eutroph. Marine',
+    'Ecotoxicity Marine',
+    'Ozone Depletion',
+    'Particulate Matter',
+    'Meterial Resources',
+    'Acidification Terrestrial',
+    'Ecotoxicity Terrestrial',
+    'Water Use'
+    ]
+    lca_contributions = lca_contributions.sort_index(axis=1, ascending=False)
 
     index_mapping = {'U1': 'Leaching', 'F1': 'Leaching', 'F2': 'Leaching',
         'P1': 'Concentration', 'F3': 'Concentration', 'H1': 'Concentration', 
@@ -177,7 +203,6 @@ def analysis_MSP_contributions(sys, tea, fs_stream, fs_unit, fununit, lca_result
         'M0': 'PG Credit'}
     # Replace the index values based on the mapping
     lca_contributions.index = lca_contributions.index.to_series().replace(index_mapping)
-    lca_contributions['Natural Land Transformation'] = lca_contributions.loc[:, 'Natural Land Transformation'].multiply(-1) # for some reason CFs for NLTP are inverted (*-1). This appears to be an ecoinvent 3.8 LCIA method list issue not a brightway2 issue.
 
     # Group by index and aggregate 'Value' using sum
     indicator_contributions = lca_contributions.groupby(lca_contributions.index).agg('sum')
@@ -213,7 +238,7 @@ def analysis_MSP_contributions(sys, tea, fs_stream, fs_unit, fununit, lca_result
     font = {'family': 'Calibri', 'size': 8}
     plt.rc('font', **font)
 
-    fig, ax = plt.subplots(figsize=(width_one_col*cm_to_in, width_one_col*aspect_ratio_LtoW*cm_to_in)) # Matplotlib wants input in inches (width, length/height)
+    fig, ax = plt.subplots(figsize=(width_one_col*1.25*cm_to_in, width_one_col*aspect_ratio_LtoW*cm_to_in)) # Matplotlib wants input in inches (width, length/height)
     indicator_contributions.T.plot(kind='barh', stacked=True, color=custom_colors, ax=ax)
 
     # Set labels and title

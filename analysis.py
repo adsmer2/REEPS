@@ -96,6 +96,7 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
     fs_stream = flowsheet.stream
     fs_unit = flowsheet.unit
 
+    
     # What are you looking to run?
     # Being able to choose yes or no for these helps reduce computation load for things you aren't looking for
     report = report # "yes" or "no". Do you want to print results to excel? (saves 1 excel file to 'results' folder)
@@ -414,12 +415,6 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
         results = unit_result_tables(cost_units)
         tables_to_excel(results, writer, 'Design requirements')
 
-        # LCA Results
-        # -------------------------------
-        lca_stream_table, lca_other_table, lca_unit_result, lca_final_table = lca_results()
-        tables = [lca_stream_table, lca_other_table, lca_unit_result, lca_final_table]
-        tables_to_excel(tables, writer, 'LCA Results')
-
         # TEA Results (low level)
         # -------------------------------
         if tea is None: tea = system.TEA
@@ -443,7 +438,14 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
         lst = [tea_result, MSP_table, MSP_unit_table, indicator_contributions]
         tables_to_excel(lst, writer, 'Results high level')
 
+        # LCA Results
+        # -------------------------------
+        lca_overall_table, lca_stream_table, lca_other_table, lca_unit_result, lca_final_table = lca_results()
+        tables = [lca_overall_table, lca_stream_table, lca_other_table, lca_unit_result, lca_final_table]
+        tables_to_excel(tables, writer, 'LCA Results')
+
         writer._save()
+
         if diagram_completed: os.remove("flowsheet.png")
 
     # -----------------------------------------------------------------------
@@ -466,33 +468,28 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
         data = []
         for i, u, pu in zip(range(length), units, power_utilities):
             data.append((u.line, pu.rate, pu.cost))
-        return DataFrame(data, index=[u.ID for u in units if u.power_utility],
+        return pd.DataFrame(data, index=[u.ID for u in units if u.power_utility],
                         columns=('Unit Operation', 'Rate (kW)', 'Cost (USD/hr)'))
 
     def lca_results():
-        # get impacts for each stream and utility
+        # get impacts for total, each stream, and utility
+        lca_overall_table = pd.DataFrame.from_dict(lca.get_total_impacts(), orient='index').T.sort_index()
         lca_stream_table = lca.get_impact_table('Stream') # get lca indicator results for each flow in/out of the system
         lca_other_table = lca.get_impact_table('Other') # get lca indicator results for utilities being used in the system
-        
         # Get the impacts for each unit in the system
         results = []
+        indexes = []
         for u in fs_unit: # for each unit in the system, get the lca results and save it to results
-            result = lca.get_unit_impacts(units=u)
-            myKeys = list(result.keys())
-            myKeys.sort()
-            sorted_dict = {i: result[i] for i in myKeys}
-            myValues = sorted_dict.values()
-            d1 = pd.DataFrame(myValues, index = myKeys)
-            result = d1.values.tolist()
+            dict = lca.get_unit_impacts(units=u)
+            result = [i for i in lca.get_unit_impacts(units=u).values()]
+            columns = [i for i in dict.keys()]
+            index = u.ID
+            indexes.append(index)
             results.append(result)
-        lca_unit_result = pd.DataFrame(np.reshape(np.array(results),(len([u for u in fs_unit]), len(lca.indicators)))) # Make results a dataframe
-        # These lca results from a preexisting function do not consider the utilities unit specifically and instead incorrectly add the electricity and heating impacts to each unit (needs to be further processed)
-        col_names = [i.category for i in lca.indicators] # Get the indicator names for the columns of the df
-        col_names = [category.title() for category in col_names] # Capitalize the indicator names
-        col_names.sort()
-        ind_names = [i.ID for i in fs_unit] # get unit ID names for the rows of the df
-        lca_unit_result.columns = col_names
-        lca_unit_result.index = ind_names
+        lca_unit_result = pd.DataFrame(results) # Make results a dataframe
+        lca_unit_result.index = indexes
+        lca_unit_result.columns = columns
+        lca_unit_result = lca_unit_result.sort_index(axis=1)
 
         # get the electricity consumption for each unit in the system
         df_util = power_utility_table(fs_unit).iloc[:,1]
@@ -525,7 +522,7 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
         df_NG = df_NG.sort_index(axis=1)
 
         # subtract the sum of impacts from utilities from the impact of each unit (correct the existing function's incorrect addition of utility impacts)
-        lca_unit_result = lca_unit_result - dfSum.sort_index(axis=1).values 
+        lca_unit_result = lca_unit_result - dfSum.sort_index(axis=1).values # good spot to double check work up to this point. You should have zeros for impact of 'fake units'
 
         # Now add the utility impacts back correctly for each unit specifically
         for row in lca_unit_result.index: # for units that use electricity, add the impact of that electricity use to the system's overall impact for each impact category
@@ -540,14 +537,14 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
 
         # make a final summary table for lca results
         # -------------------------------------------
-        lca_ind = ['PG Feed Flow', 'Ln2O3 Product Flow','Total GW EI99/PG (compare kulczycka 1.56 pt)', 'Total GW ReCiPe/PG', 'Total GW ReCiPe/Ln']
-        lca_value = [fs_stream.rawPG.F_mass, fs_stream.Ln2O3.F_mass, lca.total_impacts['A_ClimateChange']/(fs_stream.rawPG.F_mass*tea.operating_days*24)*1000, lca.total_impacts['GWP100']/(fs_stream.rawPG.F_mass*tea.operating_days*24), lca.total_impacts['GWP100']/(fs_stream.Ln2O3.F_mass*tea.operating_days*24)]
-        lca_unit = ['kg/hr', 'kg/hr', 'EI99 pts/mt PG. Note: not accurate unless the correct functional unit is chosen', 'kg CO2-eq/kg PG. Note: not accurate unless the correct functional unit is chosen', 'kg CO2-eq/kg Ln. Note: not accurate unless the correct functional unit is chosen']
+        lca_ind = ['PG Feed Flow', 'Ln2O3 Product Flow', 'Total GW ReCiPe/PG', 'Total GW ReCiPe/Ln']
+        lca_value = [fs_stream.rawPG.F_mass, fs_stream.Ln2O3.F_mass, lca.total_impacts['GWP1000']/(fs_stream.rawPG.F_mass*tea.operating_days*24), lca.total_impacts['GWP1000']/(fs_stream.Ln2O3.F_mass*tea.operating_days*24)]
+        lca_unit = ['kg/hr', 'kg/hr', 'kg CO2-eq/kg PG. Note: not accurate unless the correct functional unit is chosen', 'kg CO2-eq/kg Ln. Note: not accurate unless the correct functional unit is chosen']
         lca_final_table = pd.DataFrame(list(zip(lca_value, lca_unit)))
         lca_final_table.columns = ['Value','Unit']
         lca_final_table.index = lca_ind
 
-        return lca_stream_table, lca_other_table, lca_unit_result, lca_final_table
+        return lca_overall_table, lca_stream_table, lca_other_table, lca_unit_result, lca_final_table
 
     # -----------------------------------------------------------------------
     # TEA Results (low level)
@@ -640,7 +637,7 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
     # --------------------------
     if desire_target == 'yes':
         analysis_target(fununit=fununit, feedPG=feedPG, REEcontent=REEcontent, num_ind_REEs=num_ind_REEs, num_samples=num_samples, desire_target=desire_target, figures_path=figures_path)
-
+    
     # Scenario Analysis
     # --------------------------
     if desire_scenario == 'yes':
@@ -649,12 +646,11 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
     return print('-----analysis complete-----')
 
 
-run_analysis(fununit='PG', feedPG=1000000, REEcontent=0.5/100, num_ind_REEs=9,
-             report='no', 
+run_analysis(fununit='Ln', feedPG=1000000, REEcontent=0.5/100, num_ind_REEs=9,
+             report='yes', 
              num_samples=3000,
              uncertainty='no', 
-             sensitivity='yes', parameter='technological', 
+             sensitivity='no', parameter='contextual', 
              optimization='no', 
              desire_target='no', 
              desire_scenario='no')
-
