@@ -46,14 +46,14 @@ def analysis_scenario(fununit, num_ind_REEs, figures_path):
     max_length = 23.3 # cm. The maximum lenght a figure can be
     fig, ax = plt.subplots(figsize=(width_one_col*cm_to_in, width_one_col*aspect_ratio_LtoW*cm_to_in))
     cp = plt.contourf(X,Y,Z, levels=np.linspace(0,400,30), cmap='inferno_r', extend='max')
-    fig.colorbar(cp, label=f'MSP ($/kg REO)', ticks=np.arange(0,370,60)) 
+    fig.colorbar(cp, label=f'MSP ($/kg REO)', ticks=np.arange(0,370,80)) 
 
     cp2 = plt.contour(X,Y,Z, levels=[51.5, 51.5*2], colors='black', linestyles='dashed')
-    fmt = {}
-    strs = [' MSP  51.5 ', ' MSP  103 '] 
-    for l, s in zip(cp2.levels, strs):
-        fmt[l] = s
-    ax.clabel(cp2, inline=True, fmt=fmt)
+    # fmt = {}
+    # strs = ['  Selling Price  ', '  2x Selling Price  '] # ' MSP  51.5 ', ' MSP  103 '
+    # for l, s in zip(cp2.levels, strs):
+    #     fmt[l] = s
+    # ax.clabel(cp2, inline=True, fmt=fmt)
 
     ax.set(xlabel='REE Content of the PG (wt %)', ylabel='Capacity (M kg PG/hr)')
     fig.tight_layout()

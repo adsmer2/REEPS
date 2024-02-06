@@ -353,13 +353,13 @@ def create_model(sys, fununit, parameter, target):
 
     # Economic
     # -----------
-    @metric(name='NPV15', units='MM USD/kg', element='TEA')
+    @metric(name='NPV15', units='MM USD', element='TEA')
     def get_NPV():
         return tea.NPV/1000000
 
     @metric(name='IRR', units='%', element='TEA')
     def get_IRR():
-        return tea.solve_IRR()
+        return tea.solve_IRR()*100
         
     @metric(name='MSP', units='USD/kg REO', element='TEA')
     def get_MSP():
@@ -367,84 +367,73 @@ def create_model(sys, fununit, parameter, target):
 
     # Environmental
     # -----------
-    @metric(name='Global Warming', units=f'kg CO2-Eq/kg {fununit}', element='LCA')
+    @metric(name='Acidification Terrestrial', units=f'kg SO\u2082-Eq/kg {fununit}', element='LCA')
+    def get_annual_TAP():
+        if fununit == 'Ln':
+            return lca.total_impacts['TAP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+        elif fununit == 'PG':
+            return lca.total_impacts['TAP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+        elif fununit == 'none':
+            return lca.total_impacts['TAP']
+        else:
+            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+        
+    @metric(name='Climate Change', units=f'kg CO\u2082-Eq/kg {fununit}', element='LCA')
     def get_annual_GWP100():
         if fununit == 'Ln':
-            return lca.total_impacts['GWP100']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+            return lca.total_impacts['GWP1000']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
-            return lca.total_impacts['GWP100']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+            return lca.total_impacts['GWP1000']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
-            return lca.total_impacts['GWP100']
+            return lca.total_impacts['GWP1000']
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Urban Land Occupation', units=f'square meter-year/kg {fununit}', element='LCA')
-    def get_annual_ULOP():
+    @metric(name='Ecotoxicity Freshwater', units=f'kg 1,4-DCB-Eq/kg {fununit}', element='LCA')
+    def get_annual_FETP():
         if fununit == 'Ln':
-            return lca.total_impacts['ULOP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+            return lca.total_impacts['FETP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
-            return lca.total_impacts['ULOP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+            return lca.total_impacts['FETP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
-            return lca.total_impacts['ULOP']
+            return lca.total_impacts['FETP']
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Agricultural Land Occupation', units=f'square meter-year/kg {fununit}', element='LCA')
-    def get_annual_ALOP():
+    @metric(name='Ecotoxicity Marine', units=f'kg 1,4-DCB-Eq/kg {fununit}', element='LCA')
+    def get_annual_METP():
         if fununit == 'Ln':
-            return lca.total_impacts['ALOP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+            return lca.total_impacts['METP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
-            return lca.total_impacts['ALOP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+            return lca.total_impacts['METP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
-            return lca.total_impacts['ALOP']
+            return lca.total_impacts['METP']
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Freshwater Ecotoxicity', units=f'kg 1,4-DCB-Eq/kg {fununit}', element='LCA')
-    def get_annual_FETPinf():
+    @metric(name='Ecotoxicity Terrestrial', units=f'kg 1,4-DCB-Eq/kg {fununit}', element='LCA')
+    def get_annual_TETP():
         if fununit == 'Ln':
-            return lca.total_impacts['FETPinf']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+            return lca.total_impacts['TETP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
-            return lca.total_impacts['FETPinf']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+            return lca.total_impacts['TETP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
-            return lca.total_impacts['FETPinf']
+            return lca.total_impacts['TETP']
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Human Toxicity', units=f'kg 1,4-DCB-Eq/kg {fununit}', element='LCA')
-    def get_annual_HTPinf():
+    @metric(name='Energy Resources', units=f'kg oil-Eq/kg {fununit}', element='LCA')
+    def get_annual_FFP():
         if fununit == 'Ln':
-            return lca.total_impacts['HTPinf']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+            return lca.total_impacts['FFP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
-            return lca.total_impacts['HTPinf']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+            return lca.total_impacts['FFP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
-            return lca.total_impacts['HTPinf']
+            return lca.total_impacts['FFP']
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Metal Depletion', units=f'kg Fe-Eq/kg {fununit}', element='LCA')
-    def get_annual_MDP():
-        if fununit == 'Ln':
-            return lca.total_impacts['MDP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
-        elif fununit == 'PG':
-            return lca.total_impacts['MDP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
-        elif fununit == 'none':
-            return lca.total_impacts['MDP']
-        else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
-        
-    @metric(name='Fossil Depletion', units=f'kg oil-Eq/kg {fununit}', element='LCA')
-    def get_annual_FDP():
-        if fununit == 'Ln':
-            return lca.total_impacts['FDP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
-        elif fununit == 'PG':
-            return lca.total_impacts['FDP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
-        elif fununit == 'none':
-            return lca.total_impacts['FDP']
-        else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
-        
-    @metric(name='Freshwater Eutrophication', units=f'kg P-Eq/kg {fununit}', element='LCA')
+    @metric(name='Eutroph. Freshwater', units=f'kg P-Eq/kg {fununit}', element='LCA')
     def get_annual_FEP():
         if fununit == 'Ln':
             return lca.total_impacts['FEP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
@@ -455,84 +444,7 @@ def create_model(sys, fununit, parameter, target):
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Terrestrial Acidification', units=f'kg SO2-Eq/kg {fununit}', element='LCA')
-    def get_annual_TAP100():
-        if fununit == 'Ln':
-            return lca.total_impacts['TAP100']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
-        elif fununit == 'PG':
-            return lca.total_impacts['TAP100']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
-        elif fununit == 'none':
-            return lca.total_impacts['TAP100']
-        else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
-        
-    @metric(name='Particulate Matter Formation', units=f'kg PM10-Eq/kg {fununit}', element='LCA')
-    def get_annual_PMFP():
-        if fununit == 'Ln':
-            return lca.total_impacts['PMFP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
-        elif fununit == 'PG':
-            return lca.total_impacts['PMFP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
-        elif fununit == 'none':
-            return lca.total_impacts['PMFP']
-        else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
-        
-    @metric(name='Ionising Radiation', units=f'kg U235-Eq/kg {fununit}', element='LCA')
-    def get_annual_IRP_HE():
-        if fununit == 'Ln':
-            return lca.total_impacts['IRP_HE']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
-        elif fununit == 'PG':
-            return lca.total_impacts['IRP_HE']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
-        elif fununit == 'none':
-            return lca.total_impacts['IRP_HE']
-        else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
-        
-    @metric(name='Marine Ecotoxicity', units=f'kg 1,4-DB-Eq/kg {fununit}', element='LCA')
-    def get_annual_METPinf():
-        if fununit == 'Ln':
-            return lca.total_impacts['METPinf']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
-        elif fununit == 'PG':
-            return lca.total_impacts['METPinf']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
-        elif fununit == 'none':
-            return lca.total_impacts['METPinf']
-        else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
-        
-    @metric(name='Terrestrial Ecotoxicity', units=f'kg 1,4-DCB-Eq/kg {fununit}', element='LCA')
-    def get_annual_TETPinf():
-        if fununit == 'Ln':
-            return lca.total_impacts['TETPinf']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
-        elif fununit == 'PG':
-            return lca.total_impacts['TETPinf']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
-        elif fununit == 'none':
-            return lca.total_impacts['TETPinf']
-        else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
-        
-    @metric(name='Natural Land Transformation', units=f'square meter/kg {fununit}', element='LCA')
-    def get_annual_NLTP():
-        if fununit == 'Ln':
-            return lca.total_impacts['NLTP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
-        elif fununit == 'PG':
-            return lca.total_impacts['NLTP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
-        elif fununit == 'none':
-            return lca.total_impacts['NLTP']
-        else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
-        
-    @metric(name='Photochemical Oxidant Formation', units=f'kg NMVOC-Eq/kg {fununit}', element='LCA')
-    def get_annual_POFP():
-        if fununit == 'Ln':
-            return lca.total_impacts['POFP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
-        elif fununit == 'PG':
-            return lca.total_impacts['POFP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
-        elif fununit == 'none':
-            return lca.total_impacts['POFP']
-        else:
-            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
-        
-    @metric(name='Marine Eutrophication', units=f'kg N-Eq/kg {fununit}', element='LCA')
+    @metric(name='Eutroph. Marine', units=f'kg P-Eq/kg {fununit}', element='LCA')
     def get_annual_MEP():
         if fununit == 'Ln':
             return lca.total_impacts['MEP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
@@ -543,25 +455,113 @@ def create_model(sys, fununit, parameter, target):
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Ozone Depletion', units=f'kg CFC-11-Eq/kg {fununit}', element='LCA')
-    def get_annual_ODPinf():
+    @metric(name='Human Toxicity Carc.', units=f'kg 1,4-DCB-Eq/kg {fununit}', element='LCA')
+    def get_annual_HTPc():
         if fununit == 'Ln':
-            return lca.total_impacts['ODPinf']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+            return lca.total_impacts['HTPc']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
-            return lca.total_impacts['ODPinf']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+            return lca.total_impacts['HTPc']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
-            return lca.total_impacts['ODPinf']
+            return lca.total_impacts['HTPc']
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
         
-    @metric(name='Water Depletion', units=f'm3 water-Eq/kg {fununit}', element='LCA')
-    def get_annual_WDP():
+    @metric(name='Human Toxicity N-carc.', units=f'kg 1,4-DCB-Eq/kg {fununit}', element='LCA')
+    def get_annual_HTPnc():
         if fununit == 'Ln':
-            return lca.total_impacts['WDP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+            return lca.total_impacts['HTPnc']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
         elif fununit == 'PG':
-            return lca.total_impacts['WDP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+            return lca.total_impacts['HTPnc']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
         elif fununit == 'none':
-            return lca.total_impacts['WDP']
+            return lca.total_impacts['HTPnc']
+        else:
+            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+        
+    @metric(name='Ionising Radiation', units=f'kBq Co-60-Eq/kg {fununit}', element='LCA')
+    def get_annual_IRP():
+        if fununit == 'Ln':
+            return lca.total_impacts['IRP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+        elif fununit == 'PG':
+            return lca.total_impacts['IRP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+        elif fununit == 'none':
+            return lca.total_impacts['IRP']
+        else:
+            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+        
+    @metric(name='Land Use', units=f'm\u00B2*a crop-Eq/kg {fununit}', element='LCA')
+    def get_annual_LOP():
+        if fununit == 'Ln':
+            return lca.total_impacts['LOP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+        elif fununit == 'PG':
+            return lca.total_impacts['LOP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+        elif fununit == 'none':
+            return lca.total_impacts['LOP']
+        else:
+            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+        
+    @metric(name='Meterial Resources', units=f'kg Cu-Eq/kg {fununit}', element='LCA')
+    def get_annual_SOP():
+        if fununit == 'Ln':
+            return lca.total_impacts['SOP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+        elif fununit == 'PG':
+            return lca.total_impacts['SOP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+        elif fununit == 'none':
+            return lca.total_impacts['SOP']
+        else:
+            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+        
+    @metric(name='Ozone Depletion', units=f'kg CFC-11-Eq/kg {fununit}', element='LCA')
+    def get_annual_ODPinfinite():
+        if fununit == 'Ln':
+            return lca.total_impacts['ODPinfinite']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+        elif fununit == 'PG':
+            return lca.total_impacts['ODPinfinite']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+        elif fununit == 'none':
+            return lca.total_impacts['ODPinfinite']
+        else:
+            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+        
+    @metric(name='Particulate Matter', units=f'kg PM2.5-Eq/kg {fununit}', element='LCA')
+    def get_annual_PMFP():
+        if fununit == 'Ln':
+            return lca.total_impacts['PMFP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+        elif fununit == 'PG':
+            return lca.total_impacts['PMFP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+        elif fununit == 'none':
+            return lca.total_impacts['PMFP']
+        else:
+            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+        
+    @metric(name='Photochemical Ox. Human Health', units=f'kg NOx-Eq/kg {fununit}', element='LCA')
+    def get_annual_HOFP():
+        if fununit == 'Ln':
+            return lca.total_impacts['HOFP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+        elif fununit == 'PG':
+            return lca.total_impacts['HOFP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+        elif fununit == 'none':
+            return lca.total_impacts['HOFP']
+        else:
+            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+        
+    @metric(name='Photochemical Ox. Ecosystems', units=f'kg NOx-Eq/kg {fununit}', element='LCA')
+    def get_annual_EOFP():
+        if fununit == 'Ln':
+            return lca.total_impacts['EOFP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+        elif fununit == 'PG':
+            return lca.total_impacts['EOFP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+        elif fununit == 'none':
+            return lca.total_impacts['EOFP']
+        else:
+            raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
+        
+    @metric(name='Water Use', units=f'cubic meter/kg {fununit}', element='LCA')
+    def get_annual_WCP():
+        if fununit == 'Ln':
+            return lca.total_impacts['WCP']/(lca.lifetime*fs_stream.Ln2O3.F_mass*tea.operating_days*24)
+        elif fununit == 'PG':
+            return lca.total_impacts['WCP']/(lca.lifetime*fs_stream.rawPG.F_mass*tea.operating_days*24)
+        elif fununit == 'none':
+            return lca.total_impacts['WCP']
         else:
             raise NameError(f'For model metric, {fununit} is not "Ln" or "PG"')
 

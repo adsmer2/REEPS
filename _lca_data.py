@@ -9,6 +9,7 @@ Chemical Engineering Department
 # %%
 
 import os, sys, pickle, pandas as pd, qsdsan as qs, brightway2 as bw
+import re as re
 
 c_path = os.path.dirname(__file__)
 data_path = os.path.join(c_path, 'data')
@@ -16,17 +17,26 @@ data_path = os.path.join(c_path, 'data')
 __all__ = ('create_indicators', 'create_items', 'get_cf_data', 'save_cf_data', '_load_lca_data')
 
 # %%
+# =======================================================================
+# Create/open a brightway2 project
+# =======================================================================
+bw.projects.set_current('REEPSv1') # create/open brightway2 project
+bw.bw2setup() # setup the project and make sure it has the biosphere3 database
+bsdb = bw.Database('biosphere3') # biosphere database for ecoinvent 3.9.1
+
 
 # =============================================================================
 # Database download, only run this once to download the database
 # =============================================================================
 
+# To use this function, you must have purchased access to ecoinvent v3.9.1
 # If this doesn't work, try running eidl in jupyter nb 
-# this version of eidl no longer works with the new ecoinvent ecoquery update. A new build has been released that addresses this issue.
 def download_data():
     import eidl
-    eidl.get_ecoinvent() # ei cutoff 3.8
+    eidl.get_ecoinvent() # ei cutoff 3.9.1
 
+# download_data() # uncomment this to import the ecoinvent database. Comment it again after importing
+eidb = bw.Database('cutoff391') # LCI database from ecoinvent (v3.9.1 cutoff method). Contains technological flows and activities
 
 # =============================================================================
 # Using elementary flows in the biosphere3 database
@@ -34,9 +44,9 @@ def download_data():
 def create_biosphere_activity():
     # In order to use Biosphere3 database flows, they must be added to the Ecoinvent database via the creation of a new activity with one exchange (the bsdb flow of interest)
     # Loading activities to bw2qsd in "select_items()" and then calculating emission factors in "organize_cfs()" is good after doing the above step.
-    # define bw2 databases
-    eidb = bw.Database('cutoff38') # LCI database from ecoinvent (v3.8 cutoff method). Contains technological flows and activities
-    bsdb = bw.Database('biosphere3') # LCI database including all the ecoinvent elementary flows
+
+    for activity in [act for act in eidb if act['name']=='CO2_emission' or act['name']=='CO_emission' or act['name']=='water_emission']:
+        activity.delete()
 
     # create new activity in the eidb with the name of your biosphere flow
     CO2_emission = eidb.new_activity(code = 'One CO2 stream=1', name = "CO2_emission", unit = "kg")
@@ -60,41 +70,40 @@ def create_biosphere_activity():
     # confirm your flow is now in the eidb database correctly
     confirm_CO = [i for i in eidb if 'CO_emission' in i['name']][0]
 
-    # -----------
-    # create new activity in the eidb with the name of your biosphere flow
-    water_emission = eidb.new_activity(code = 'One water_surface stream=1', name = "water_emission", unit = "m3")
-    water_emission.save()
+    # # -----------
+    # # create new activity in the eidb with the name of your biosphere flow
+    # water_emission = eidb.new_activity(code = 'One water_surface stream=1', name = "water_emission", unit = "m3")
+    # water_emission.save()
 
-    # select the biosphere flow of interest and add it as a new exchange to the activity created
-    water_surface = [i for i in bsdb if 'Water' in i['name'] and 'water' in i['categories'] and 'surface water' in i['categories'] and 'emission' in i['type']][0]
-    water_emission.new_exchange(input=water_surface.key,amount=1,type='biosphere').save()
+    # # select the biosphere flow of interest and add it as a new exchange to the activity created
+    # water_surface = [i for i in bsdb if 'Water' in i['name'] and 'water' in i['categories'] and 'surface water' in i['categories'] and 'emission' in i['type']][0]
+    # water_emission.new_exchange(input=water_surface.key,amount=1,type='biosphere').save()
 
-    # confirm your flow is now in the eidb database correctly
-    confirm_water = [i for i in eidb if 'water_emission' in i['name']][0]
-    return confirm_CO2, confirm_CO, confirm_water
+    # # confirm your flow is now in the eidb database correctly
+    # confirm_water = [i for i in eidb if 'water_emission' in i['name']][0]
+    return confirm_CO2, confirm_CO #, confirm_water
 
 # ==========================================================================
 # Adding activity into ecoinvent database for PG stacking
 # ==========================================================================
 def create_PGstack_activity():
     # Loading custom activities to bw2qsd in "select_items()" and then calculating emission factors in "organize_cfs()" is good after doing the above step.
-    # define bw2 databases
-    eidb = bw.Database('cutoff38')
-    bsdb = bw.Database('biosphere3')
 
     # create new activity in the eidb with the name of your custom activity
     PGstack_Tsioka = eidb.new_activity(code = 'PG Stack Tsioka and Voudrias', name = "PG Stack Tsioka", unit = "t") # t is tonne in bw2. ('t', 'kilogram', 1e3) from https://github.com/brightway-lca/brightway2-io/blob/main/bw2io/units.py
+    for activity in [act for act in eidb if act['name']=='PG Stack Tsioka']:
+        activity.delete()
     PGstack_Tsioka.save()
     # Add exchanges to the activity according to the paper, Journal of Cleaner Production 266 (2020) 121386, Tsioka and Voudrias - 2020 - Comparison of alternative management methods for phosphogypsum waste using life cycle analysis
     land_occupation = [exc for exc in bsdb if 'Occupation, pasture, man made' in exc['name'] and not 'intensive' in exc['name'] and not 'extensive' in exc['name']][0]
     PGstack_Tsioka.new_exchange(input=land_occupation.key,amount=153.8,type='biosphere').save()
     fluoride = [exc for exc in bsdb if 'Fluoride' in exc['name'] and 'water' in exc['categories'] and 'ground-' in exc['categories']][0]
     PGstack_Tsioka.new_exchange(input=fluoride.key,amount=118.12/1000,type='biosphere').save() 
-    chromium = [exc for exc in bsdb if 'Chromium, ion' in exc['name'] and 'water' in exc['categories'] and 'ground-' in exc['categories']][0]
+    chromium = [exc for exc in bsdb if 'Chromium VI' in exc['name'] and 'water' in exc['categories'] and 'ground-' in exc['categories']][0] # chromium IV gives an ecotoxicity closer to that of the Tsioka and Voudrias paper (CrIII=0Pt, CrIV=0.0046Pt to literature=0.006Pt)
     PGstack_Tsioka.new_exchange(input=chromium.key,amount=0.000862,type='biosphere').save()
-    zinc = [exc for exc in bsdb if 'Zinc, ion' in exc['name'] and 'water' in exc['categories'] and 'ground-' in exc['categories']][0]
+    zinc = [exc for exc in bsdb if 'Zinc II' in exc['name'] and 'water' in exc['categories'] and 'ground-' in exc['categories']][0]
     PGstack_Tsioka.new_exchange(input=zinc.key,amount=0.00384,type='biosphere').save()
-    cadmium = [exc for exc in bsdb if 'Cadmium, ion' in exc['name'] and 'water' in exc['categories'] and 'ground-' in exc['categories']][0]
+    cadmium = [exc for exc in bsdb if 'Cadmium II' in exc['name'] and 'water' in exc['categories'] and 'ground-' in exc['categories']][0]
     PGstack_Tsioka.new_exchange(input=cadmium.key,amount=0.00189,type='biosphere').save()
     copper = [exc for exc in bsdb if 'Copper' in exc['name'] and 'water' in exc['categories'] and 'ground-' in exc['categories']][0]
     PGstack_Tsioka.new_exchange(input=copper.key,amount=0.000794,type='biosphere').save()
@@ -102,15 +111,15 @@ def create_PGstack_activity():
     PGstack_Tsioka.new_exchange(input=phosphate.key,amount=0.726,type='biosphere').save()
     radium = [exc for exc in bsdb if 'Radium-226' in exc['name'] and 'water' in exc['categories'] and 'ground-' in exc['categories']][0]
     PGstack_Tsioka.new_exchange(input=radium.key,amount=9.27,type='biosphere').save()
-    sulfate = [exc for exc in bsdb if 'Sulfate, ion' in exc['name'] and 'water' in exc['categories'] and 'ground-' in exc['categories']][0]
+    sulfate = [exc for exc in bsdb if 'Sulfate' in exc['name'] and 'water' in exc['categories'] and 'ground-' in exc['categories']][0]
     PGstack_Tsioka.new_exchange(input=sulfate.key,amount=64.59,type='biosphere').save()
-    calcium = [exc for exc in bsdb if 'Calcium' in exc['name'] and 'water' in exc['categories'] and 'ground-' in exc['categories']][0]
+    calcium = [exc for exc in bsdb if 'Calcium II' in exc['name'] and 'water' in exc['categories'] and 'ground-' in exc['categories']][0]
     PGstack_Tsioka.new_exchange(input=calcium.key,amount=12.08,type='biosphere').save()
     hydrogen_fluoride = [exc for exc in bsdb if 'Hydrogen fluoride' in exc['name'] and 'air' in exc['categories'] and 'low population density, long-term' in exc['categories']][0]
     PGstack_Tsioka.new_exchange(input=hydrogen_fluoride.key,amount=38.4/1000,type='biosphere').save() 
     silicon_tetrafluoride = [exc for exc in bsdb if 'Silicon tetrafluoride' in exc['name'] and 'air' in exc['categories'] and 'low population density, long-term' in exc['categories']][0]
     PGstack_Tsioka.new_exchange(input=silicon_tetrafluoride.key,amount=49.9/1000,type='biosphere').save() # ,unit='gram'
-    particulates_10um = [exc for exc in bsdb if 'Particulates, > 10 um' in exc['name'] and 'air' in exc['categories'] and 'low population density, long-term' in exc['categories']][0]
+    particulates_10um = [exc for exc in bsdb if 'Particulate Matter, > 10' in exc['name'] and 'air' in exc['categories'] and 'low population density, long-term' in exc['categories']][0]
     PGstack_Tsioka.new_exchange(input=particulates_10um.key,amount=0.696/1000,type='biosphere').save() 
     uranium_air = [exc for exc in bsdb if 'Uranium-238' in exc['name'] and 'air' in exc['categories'] and 'low population density, long-term' in exc['categories']][0]
     PGstack_Tsioka.new_exchange(input=uranium_air.key,amount=0.024/1000,type='biosphere').save() 
@@ -134,26 +143,28 @@ def create_PGstack_activity():
 def create_indicators(replace=True):
     from bw2qsd import CFgetter
     from bw2qsd.utils import format_name
-    cutoff38 = CFgetter('cutoff38')
-    # ecoinvent version 3.8, cutoff
-    cutoff38.load_database('cutoff38')
+    cutoff391 = CFgetter('cutoff391')
+    # ecoinvent version 3.9.1, cutoff
+    cutoff391.load_database('cutoff391')
 
-    # Include ReCiPe v1.13 (Hierarchist) LCIA method 
-    cutoff38.load_indicators(add=True, method='ReCiPe Midpoint (H) V1.13', method_exclude=('LT'))
-    # Include Ecoindicator99 global warming impact for comparison to other literature
-    cutoff38.load_indicators(add=True, method='eco-indicator', method_exclude=('LT','E,E','I,I'), category_exclude='total', indicator='climate change')
+    # Include ReCiPe 2016 v1.03 (Hierarchist) Midpoint LCIA method w/ LT impact
+    cutoff391.load_indicators(add=True, method='ReCiPe 2016 v1.03, midpoint (H)', method_exclude=('no LT'))
 
     # Make the names of the indicators nicer
-    ind_df_raw = cutoff38.export_indicators(show=False, path='') # writes indicators to file
+    ind_df_raw = cutoff391.export_indicators(show=False, path='') # writes indicators to file
+    ind_df_processed = ind_df_raw.copy()
+
+    replace = True
     ind_df_processed = ind_df_raw.copy()
 
     for num, ind in ind_df_raw.iterrows():
         old_name = ind['indicator']
-        if 'ReCiPe' in ind['method']:
-            new_name = old_name
+        if 'ReCiPe' in ind['method']: # need to remove special characters for .load_from_file to work
+            name1 = old_name.split('(')[1]
+            new_name = name1.split(')')[0]
+            
         else:
-            kind = ind['method'].split(') (')[0][-1] # egalitarian, hierarchist, individualist
-            new_name = f'{kind}_{format_name(ind["indicator"])}'.translate({ord('&'):'And'}) # categorical total
+            RuntimeError('need to write code for indicator names of other LCIA methods')
         ind_df_processed.iloc[num]['indicator'] = new_name
 
     ind_df_processed.sort_values(by=['method', 'category', 'indicator'], inplace=True)
@@ -171,7 +182,7 @@ def create_indicators(replace=True):
     qs.ImpactIndicator.load_from_file(ind_df_processed) # get the stored impact assessment method impact indicators from file
     indicators = qs.ImpactIndicator.get_all_indicators() # link these indicators to the qsdsan package for use in the system model
 
-    return cutoff38, ind_df_processed, indicators
+    return cutoff391, ind_df_processed, indicators
 
 
 # %%
@@ -185,7 +196,7 @@ def select_items(database):
     Identify the activities of interest from ecoinvent using brightway2
     '''
     all_acts = {}
-    eidb = bw.Database('cutoff38')
+    eidb = bw.Database('cutoff391')
 
     def new_act(database, all_acts, name):
         act = database.copy(name)
@@ -274,11 +285,11 @@ def select_items(database):
     dct2 = {dct['name']: dct}
     CO_item._activities.update(dct2)
 
-    # Wastwater treatment: medium density fibreboard
-    wastewater_pb_item = new_act(database, all_acts, 'wastewater_pb_item')
-    dct = [i for i in eidb if 'treatment of wastewater from medium density fibreboard production' in i['name'] and 'RER' in i['location']][0]
-    dct2 = {dct['name']: dct}
-    wastewater_pb_item._activities.update(dct2)
+    # # Wastwater treatment: medium density fibreboard
+    # wastewater_pb_item = new_act(database, all_acts, 'wastewater_pb_item')
+    # dct = [i for i in eidb if 'treatment of wastewater from medium density fibreboard production' in i['name'] and 'RER' in i['location']][0]
+    # dct2 = {dct['name']: dct}
+    # wastewater_pb_item._activities.update(dct2)
 
     # Nitric Acid
     HNO3_item = new_act(database, all_acts, 'HNO3_item')
@@ -367,12 +378,12 @@ def organize_cfs(all_acts):
 
     cf_dct['CO2_item'] = get_stats(all_acts['CO2_item'].CFs)
 
-    all_acts['CO_item'].CFs.loc[1:,('ReCiPe Midpoint (H) V1.13','climate change','GWP100')] = 1.9 # change the GWP100 of carbon monoxide from 0 to 1.9 to account for the indirect GW affect of carbon monoxide from https://archive.ipcc.ch/publications_and_data/ar4/wg1/en/ch2s2-10-3-2.html
+    all_acts['CO_item'].CFs.loc[1:,('ReCiPe 2016 v1.03, midpoint (H)','climate change','global warming potential (GWP1000)')] = 1.9 # change the GWP100 of carbon monoxide from 0 to 1.9 to account for the indirect GW affect of carbon monoxide from https://archive.ipcc.ch/publications_and_data/ar4/wg1/en/ch2s2-10-3-2.html
     cf_dct['CO_item'] = get_stats(all_acts['CO_item'].CFs)
 
-    cf_dct['wastewater_pb_item'] = get_stats(all_acts['wastewater_pb_item'].CFs)
-    cols = all_acts['wastewater_pb_item'].CFs.columns[2:]
-    cf_dct['wastewater_pb_item'][cols] *= -1 # turning negative input into output
+    # cf_dct['wastewater_pb_item'] = get_stats(all_acts['wastewater_pb_item'].CFs)
+    # cols = all_acts['wastewater_pb_item'].CFs.columns[2:]
+    # cf_dct['wastewater_pb_item'][cols] *= -1 # turning negative input into output
 
     cf_dct['HNO3_item'] = get_stats(all_acts['HNO3_item'].CFs)
 
@@ -423,8 +434,8 @@ def get_cf_data():
     Runs all the above functions to prep the data for writing to file in save_cf_data()
     '''
     from bw2qsd import remove_setups_pickle
-    cutoff38, ind_df_processed, indicators = create_indicators()
-    all_acts = select_items(cutoff38)
+    cutoff391, ind_df_processed, indicators = create_indicators()
+    all_acts = select_items(cutoff391)
     cf_dct = organize_cfs(all_acts)
 
     # Only run this at the very end to remove the outdated setup.pickle file
@@ -439,8 +450,8 @@ def save_cf_data():
     '''
     ind_df_processed, all_acts, cf_dct = get_cf_data()
 
-    ind_file = 'indicators_new.tsv'
-    raw_path = os.path.join(data_path, 'CFs_new')
+    ind_file = 'indicators.tsv'
+    raw_path = os.path.join(data_path, 'CFs')
 
     # Impact indicators
     ind_df_processed.to_csv(os.path.join(data_path, ind_file), sep='\t')
@@ -464,7 +475,7 @@ def _load_lca_data():
     '''
     Load impact indicator and impact item data from file and create impact items in qsdsan for use in systems.py
     '''
-    indicator_path = os.path.join(data_path, 'indicators_new.tsv')
+    indicator_path = os.path.join(data_path, 'indicators.tsv')
     indel_col = 0
     ind_df_processed = pd.read_csv(indicator_path, sep='\t', index_col=indel_col)
     qs.ImpactIndicator.load_from_file(indicator_path)
@@ -476,8 +487,8 @@ def _load_lca_data():
     create_items(ind_df_processed, cf_dct)
 
 
-# confirm_CO2, confirm_CO, confirm_water = create_biosphere_activity()
-# print(confirm_CO2, confirm_CO, confirm_water)
+# confirm_CO2, confirm_CO = create_biosphere_activity()
+# print(confirm_CO2, confirm_CO)
 # confirm1, confirm2 = create_PGstack_activity() # run ONLY the first time you run _LCA_data.py
 # print(confirm1, confirm2)
 
