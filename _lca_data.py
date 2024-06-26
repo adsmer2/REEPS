@@ -145,13 +145,14 @@ def create_indicators(replace=True):
     from bw2qsd.utils import format_name
     cutoff391 = CFgetter('cutoff391')
     # ecoinvent version 3.9.1, cutoff
-    cutoff391.load_database('cutoff391')
+    cutoff391.load_database('cutoff391')  
 
     # Include ReCiPe 2016 v1.03 (Hierarchist) Midpoint LCIA method w/ LT impact
     cutoff391.load_indicators(add=True, method='ReCiPe 2016 v1.03, midpoint (H)', method_exclude=('no LT'))
+    # cutoff391.load_indicators(add=True, method='ReCiPe 2016 v1.03, endpoint (H)', method_exclude=('no LT')) # , category='total'     doesn't work for some reason
 
     # Make the names of the indicators nicer
-    ind_df_raw = cutoff391.export_indicators(show=False, path='') # writes indicators to file
+    ind_df_raw = cutoff391.export_indicators(show=False, path='') # writes indicators to file # ind_df_raw
     ind_df_processed = ind_df_raw.copy()
 
     replace = True
@@ -159,11 +160,12 @@ def create_indicators(replace=True):
 
     for num, ind in ind_df_raw.iterrows():
         old_name = ind['indicator']
-        if 'ReCiPe' in ind['method']: # need to remove special characters for .load_from_file to work
+        if 'ReCiPe' in ind['method'] and 'midpoint' in ind['method']: # need to remove special characters for .load_from_file to work
             name1 = old_name.split('(')[1]
             new_name = name1.split(')')[0]
             
         else:
+            # new_name = ''.join(e for e in old_name if e.isalnum())
             RuntimeError('need to write code for indicator names of other LCIA methods')
         ind_df_processed.iloc[num]['indicator'] = new_name
 
@@ -179,7 +181,7 @@ def create_indicators(replace=True):
                 ind.deregister()
                 sys.stdout = stdout
 
-    qs.ImpactIndicator.load_from_file(ind_df_processed) # get the stored impact assessment method impact indicators from file
+    # qs.ImpactIndicator.load_from_file(ind_df_processed) # get the stored impact assessment method impact indicators from file
     indicators = qs.ImpactIndicator.get_all_indicators() # link these indicators to the qsdsan package for use in the system model
 
     return cutoff391, ind_df_processed, indicators
@@ -485,14 +487,17 @@ def _load_lca_data():
     cf_dct = pickle.load(f)
     f.close()
     create_items(ind_df_processed, cf_dct)
-
+    return ind_df_processed, cf_dct
 
 # confirm_CO2, confirm_CO = create_biosphere_activity()
 # print(confirm_CO2, confirm_CO)
 # confirm1, confirm2 = create_PGstack_activity() # run ONLY the first time you run _LCA_data.py
 # print(confirm1, confirm2)
-
 # save_cf_data() # run the first time and every time you make a change to the LCA items
+
+# ind_df_processed, cf_dct = _load_lca_data()
+# print(ind_df_processed)
+# print(cf_dct)
 
 # Errors (and solutions)
 # Pickle deserialization error in file 'C:\Users\ajs8911\AppData\Local\pylca\Brightway3\default.c21f969b5f03d33d43e04f8f136e7682\setups.pickle'

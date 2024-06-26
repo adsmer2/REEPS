@@ -61,9 +61,9 @@ cmps = create_components() # generates the properties required for each componen
 cmps.set_synonym('H2O', 'Water') # set an alternative name for water that can be used
 
 # Get the LCA emission factors and define functional unit
-_load_lca_data() # Generates impact items that can be linked to flows in/out of the system. Items contain the emission factors calculated from ecoinvent v3.8 data for each indicator and flow specified in _lca_data.py
-
+ind_df_processed, cf_dct =_load_lca_data() # Generates impact items that can be linked to flows in/out of the system. Items contain the emission factors calculated from ecoinvent v3.9.1 data for each indicator and flow specified in _lca_data.py
 # Function that creates and simulates the system along with the corresponding TEA and LCA results
+
 def create_system(fununit, feedPG, REEcontent, num_ind_REEs):
     """
     fununit = 'PG' # functional unit of interest (PG, REO, or none)

@@ -106,7 +106,7 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
     parameter = parameter # "contextual", "technological" or "all". sensitivity is split between these two types of parameters 
     optimization = optimization # "yes" or "no". Do you want to make contour plots to pre-optimize the leaching unit? (saves 6 contour plots to 'figures' folder)
     desire_target = desire_target # "yes" or "no". Do you want to identify if the technologies meet the targets? (saves 1 target plot to 'figures' folder)
-
+    
     # =============================================================================
     # Print the system results to Excel
     # =============================================================================
@@ -585,15 +585,15 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
     # Uncertainty Analysis
     # -------------------------
     if uncertainty == 'yes':
-        model_uncertainty = analysis_uncertainty(sys, fununit, num_samples, figures_path)
+        model_uncertainty = analysis_uncertainty(sys, fununit, num_samples, figures_path, size='full')
         
-        # Print uncertainty results to Excel file
-        writer_uncertainty = pd.ExcelWriter(os.path.join(results_path, f'{sys.ID}_uncertainty_{fununit}_{feedPG}_{REEcontent}_{num_ind_REEs}.xlsx'))
-        uncertainty_results = model_uncertainty.table
-        uncertainty_baseline = model_uncertainty.metrics_at_baseline()
-        with writer_uncertainty as writer:
-            uncertainty_results.to_excel(writer, sheet_name="Model Results")  
-            uncertainty_baseline.to_excel(writer, sheet_name="Model Baseline") 
+        # # Print uncertainty results to Excel file
+        # writer_uncertainty = pd.ExcelWriter(os.path.join(results_path, f'{sys.ID}_uncertainty_{fununit}_{feedPG}_{REEcontent}_{num_ind_REEs}.xlsx'))
+        # uncertainty_results = model_uncertainty.table
+        # uncertainty_baseline = model_uncertainty.metrics_at_baseline()
+        # with writer_uncertainty as writer:
+        #     uncertainty_results.to_excel(writer, sheet_name="Model Results")  
+        #     uncertainty_baseline.to_excel(writer, sheet_name="Model Baseline") 
 
         qs.Model._reset_system(model_uncertainty)
 
@@ -615,9 +615,9 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
 
 
         if parameter == 'technological':
-            analysis_indicator_trend(model_sensitivity, 'Acid Concentration (U1)', figures_path=figures_path) # input parameter name as it appears in model.py @param()
-            analysis_indicator_trend(model_sensitivity, 'Solvent to Solid Ratio (U1)', figures_path=figures_path)
-            analysis_indicator_trend(model_sensitivity, 'Sodium Hydroxide Feed (P3)', figures_path=figures_path)
+            analysis_indicator_trend(model_sensitivity, fununit, 'REE recovery (S1)', figures_path=figures_path) # input parameter name as it appears in model.py @param()
+        #     analysis_indicator_trend(model_sensitivity, 'Solvent to Solid Ratio (U1)', figures_path=figures_path)
+        #     analysis_indicator_trend(model_sensitivity, 'Sodium Hydroxide Feed (P3)', figures_path=figures_path)
         qs.Model._reset_system(model_sensitivity)
 
 
@@ -646,11 +646,11 @@ def run_analysis(fununit, feedPG, REEcontent, num_ind_REEs,
     return print('-----analysis complete-----')
 
 
-run_analysis(fununit='PG', feedPG=1000000, REEcontent=0.5/100, num_ind_REEs=9,
+run_analysis(fununit='REO', feedPG=1000000, REEcontent=0.5/100, num_ind_REEs=9,
              report='no', 
              num_samples=3000,
-             uncertainty='yes', 
-             sensitivity='no', parameter='contextual', 
+             uncertainty='yes',
+             sensitivity='no', parameter='technological', 
              optimization='no', 
              desire_target='no', 
              desire_scenario='no')

@@ -76,7 +76,7 @@ def analysis_optimization_leaching(system, fununit, xdata, ydata, f1data, f2data
         raise RuntimeError('"f2data" is not in an acceptable form')
 
     if indicator == 'NPV':
-        ind_slice = ('TEA', 'NPV15 [MM USD/kg]')
+        ind_slice = ('TEA', 'NPV15 [MM USD]') # /kg
         ind_axis_label = 'NPV (MM USD)'
         ind_cmap = 'inferno'
     elif indicator == 'GWP':

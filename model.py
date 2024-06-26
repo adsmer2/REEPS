@@ -38,31 +38,31 @@ def create_model(sys, fununit, parameter, target):
 
         baseline = U1.time # 200
         dist = distributions.Triangle(lower=190, midpoint=baseline, upper=205)
-        @param(name='Leaching Time (U1)', element='U1', kind='coupled', units='mins', baseline=baseline, distribution=dist)
+        @param(name='Leaching time (U1)', element='U1', kind='coupled', units='mins', baseline=baseline, distribution=dist)
         def set_leachingTime(i):
             U1.time = i
 
         baseline = U1.temp # 47
         dist = distributions.Triangle(lower=baseline-0.05*baseline, midpoint=baseline, upper=baseline+0.05*baseline) # assume 5% potential error from experiment
-        @param(name='Leaching Temperature (U1)', element='U1', kind='coupled', units='deg C', baseline=baseline, distribution=dist)
+        @param(name='Leaching temperature (U1)', element='U1', kind='coupled', units='deg C', baseline=baseline, distribution=dist)
         def set_leachingTemp(i):
             U1.temp = i
 
         baseline = U1.acidConc # 3.2
         dist = distributions.Triangle(lower=baseline-0.05*baseline, midpoint=baseline, upper=baseline+0.05*baseline)
-        @param(name='Acid Concentration (U1)', element='U1', kind='coupled', units='wt pcnt acid', baseline=baseline, distribution=dist)
+        @param(name='Acid concentration (U1)', element='U1', kind='coupled', units='wt pcnt acid', baseline=baseline, distribution=dist)
         def set_leaching_acidConc(i):
             U1.acidConc = i
 
         baseline = U1.solventRatio # 2.75
         dist = distributions.Triangle(lower=baseline-0.05*baseline, midpoint=baseline, upper=baseline+0.05*baseline)
-        @param(name='Solvent to Solid Ratio (U1)', element='U1', kind='coupled', units='Ratio of Liquid/Solid', baseline=baseline, distribution=dist)
+        @param(name='Solvent to solid ratio (U1)', element='U1', kind='coupled', units='Ratio of Liquid/Solid', baseline=baseline, distribution=dist)
         def set_leaching_solventRatio(i):
             U1.solventRatio = i
 
         baseline = U1.LOverV
         dist = distributions.Triangle(lower=baseline*0.8, midpoint=baseline, upper=baseline*1.2)
-        @param(name='overflow to underflow ratio (U1)', element='U1', kind='coupled', units='mass fraction', baseline=baseline, distribution=dist)
+        @param(name='Overflow to underflow ratio (U1)', element='U1', kind='coupled', units='mass fraction', baseline=baseline, distribution=dist)
         def set_leaching_LOverV(i):
             U1.LOverV = i
 
@@ -71,45 +71,45 @@ def create_model(sys, fununit, parameter, target):
         # P1 Precipitation Oxalate
         baseline = fs_unit.P1.OA_uncertainty
         dist = distributions.Triangle(lower=baseline*0.75, midpoint=baseline, upper=baseline*1.25)
-        @param(name='Oxalate Feed (P1)', element='P1', kind='coupled', units='kg/hr', baseline=baseline, distribution=dist)
+        @param(name='Oxalate feed (P1)', element='P1', kind='coupled', units='kg/hr', baseline=baseline, distribution=dist)
         def set_P1_oxalate_feed(i):
             fs_unit.P1.OA_uncertainty = i
 
         baseline = fs_unit.P1.res_time
         dist = distributions.Uniform(lower=60, upper=180)
-        @param(name='Residence Time (P1)', element='P1', kind='coupled', units='min', baseline=baseline, distribution=dist)
+        @param(name='Residence time (P1)', element='P1', kind='coupled', units='min', baseline=baseline, distribution=dist)
         def set_P1_res_time(i):
             fs_unit.P1.res_time = i
 
         # P2 Precipitation Oxalate Pure
         baseline = fs_unit.P2.OA_uncertainty
         dist = distributions.Triangle(lower=baseline*0.85, midpoint=baseline, upper=baseline*1.15)
-        @param(name='Oxalate Feed (P2)', element='P2', kind='coupled', units='kg/hr', baseline=baseline, distribution=dist)
+        @param(name='Oxalate feed (P2)', element='P2', kind='coupled', units='kg/hr', baseline=baseline, distribution=dist)
         def set_P2_oxalate_feed(i):
             fs_unit.P2.OA_uncertainty = i
 
         baseline = fs_unit.P2.res_time
         dist = distributions.Uniform(lower=60, upper=180)
-        @param(name='Residence Time (P2)', element='P2', kind='coupled', units='min', baseline=baseline, distribution=dist)
+        @param(name='Residence time (P2)', element='P2', kind='coupled', units='min', baseline=baseline, distribution=dist)
         def set_P2_res_time(i):
             fs_unit.P2.res_time = i
 
         # P3 Precipitation Na3PO4
         baseline = fs_unit.P3.NaOH_uncertainty
         dist = distributions.Triangle(lower=baseline*0.75, midpoint=baseline, upper=baseline*1.25)
-        @param(name='Sodium Hydroxide Feed (P3)', element='P3', kind='coupled', units='kg/hr', baseline=baseline, distribution=dist)
+        @param(name='Sodium hydroxide feed (P3)', element='P3', kind='coupled', units='kg/hr', baseline=baseline, distribution=dist)
         def set_P3_NaOH_uncertainty(i):
             fs_unit.P3.NaOH_uncertainty = i
 
         baseline = fs_unit.P3.Na3PO4_uncertainty
         dist = distributions.Triangle(lower=baseline*0.75, midpoint=baseline, upper=baseline*1.25)
-        @param(name='Na3PO4 Feed (P3)', element='P3', kind='coupled', units='kg/hr', baseline=baseline, distribution=dist)
+        @param(name='Na\u2083PO\u2084 feed (P3)', element='P3', kind='coupled', units='kg/hr', baseline=baseline, distribution=dist)
         def set_P3_Na3PO4_uncertainty(i):
             fs_unit.P3.Na3PO4_uncertainty = i
 
         baseline = fs_unit.P3.res_time
         dist = distributions.Uniform(lower=60, upper=180)
-        @param(name='Residence Time (P3)', element='P3', kind='coupled', units='min', baseline=baseline, distribution=dist)
+        @param(name='Residence time (P3)', element='P3', kind='coupled', units='min', baseline=baseline, distribution=dist)
         def set_P3_res_time(i):
             fs_unit.P3.res_time = i
 
@@ -118,25 +118,25 @@ def create_model(sys, fununit, parameter, target):
         # Filter_l
         baseline = fs_unit.F1.vacuum_energy
         dist = distributions.Triangle(lower=baseline*0.8, midpoint=baseline, upper=baseline*1.2)
-        @param(name='Vacuum Energy (F1)', element='F1', kind='coupled', units='kW/m2', baseline=baseline, distribution=dist)
+        @param(name='Vacuum energy (F1)', element='F1', kind='coupled', units='kW/m2', baseline=baseline, distribution=dist)
         def set_F1_vacuum_energy(i):
             fs_unit.F1.vacuum_energy = i
 
         baseline = fs_unit.F2.vacuum_energy
         dist = distributions.Triangle(lower=baseline*0.8, midpoint=baseline, upper=baseline*1.2)
-        @param(name='Vacuum Energy (F2)', element='F2', kind='coupled', units='kW/m2', baseline=baseline, distribution=dist)
+        @param(name='Vacuum energy (F2)', element='F2', kind='coupled', units='kW/m2', baseline=baseline, distribution=dist)
         def set_F2_vacuum_energy(i):
             fs_unit.F2.vacuum_energy = i
 
         baseline = fs_unit.F1.air_flow
         dist = distributions.Triangle(lower=baseline*0.8, midpoint=baseline, upper=baseline*1.2)
-        @param(name='Air Flow (F1)', element='F1', kind='coupled', units='m3/m2 filter area/min', baseline=baseline, distribution=dist)
+        @param(name='Air flow (F1)', element='F1', kind='coupled', units='m3/m2 filter area/min', baseline=baseline, distribution=dist)
         def set_F1_air_flow(i):
             fs_unit.F1.air_flow = i
 
         baseline = fs_unit.F2.air_flow
         dist = distributions.Triangle(lower=baseline*0.8, midpoint=baseline, upper=baseline*1.2)
-        @param(name='Air Flow (F2)', element='F2', kind='coupled', units='m3/m2 filter area/min', baseline=baseline, distribution=dist)
+        @param(name='Air flow (F2)', element='F2', kind='coupled', units='m3/m2 filter area/min', baseline=baseline, distribution=dist)
         def set_F2_air_flow(i):
             fs_unit.F2.air_flow = i
 
@@ -146,19 +146,19 @@ def create_model(sys, fununit, parameter, target):
 
         baseline = fs_unit.S1.immobilization_density
         dist = distributions.Triangle(lower=baseline*0.1, midpoint=baseline, upper=baseline*10)
-        @param(name='Immobilization Density (S1)', element='S1', kind='coupled', units='mmol/L adsorbent bed', baseline=baseline, distribution=dist)
+        @param(name='Immobilization density (S1)', element='S1', kind='coupled', units='mmol/L adsorbent bed', baseline=baseline, distribution=dist)
         def set_S1_capacity(i):
             fs_unit.S1.capacity = i
 
         baseline = fs_unit.S1.cycle_time
         dist = distributions.Triangle(lower=2, midpoint=baseline, upper=24)
-        @param(name='Cycle Time (S1)', element='S1', kind='coupled', units='hrs', baseline=baseline, distribution=dist)
+        @param(name='Cycle time (S1)', element='S1', kind='coupled', units='hrs', baseline=baseline, distribution=dist)
         def set_S1_cycle_time(i):
             fs_unit.S1.cycle_time = i
 
         baseline = fs_unit.S1.membrane_lifetime
         dist = distributions.Triangle(lower=1, midpoint=baseline, upper=20)
-        @param(name='Membrane Lifetime (S1)', element='S1', kind='coupled', units='years', baseline=baseline, distribution=dist)
+        @param(name='Adsorbent lifetime (S1)', element='S1', kind='coupled', units='years', baseline=baseline, distribution=dist)
         def set_S1_cycle_time(i):
             fs_unit.S1.membrane_lifetime = i
 
@@ -171,27 +171,27 @@ def create_model(sys, fununit, parameter, target):
         if target == 'no':
             baseline = S1.recovery
             dist = distributions.Uniform(lower=0.9, upper=1)
-            @param(name='REE Recovery (S1)', element='S1', kind='coupled', units='fraction', baseline=baseline, distribution=dist)
+            @param(name='REE recovery (S1)', element='S1', kind='coupled', units='fraction', baseline=baseline, distribution=dist)
             def set_S1_recovery(i):
                 S1.recovery = i
 
             baseline = fs_unit.S1.capacity
             dist = distributions.Triangle(lower=0.0005, midpoint=baseline, upper=5)
-            @param(name='Adsorbent Capacity (S1)', element='S1', kind='coupled', units='mol/L adsorbent', baseline=baseline, distribution=dist)
+            @param(name='Adsorbent capacity (S1)', element='S1', kind='coupled', units='mol/L adsorbent', baseline=baseline, distribution=dist)
             def set_S1_capacity(i):
                 fs_unit.S1.capacity = i
 
         elif target == 'REE Recovery (S1)':
             baseline = S1.recovery
             dist = distributions.Uniform(lower=0.2, upper=1)
-            @param(name='REE Recovery (S1)', element='S1', kind='coupled', units='fraction', baseline=baseline, distribution=dist)
+            @param(name='REE recovery (S1)', element='S1', kind='coupled', units='fraction', baseline=baseline, distribution=dist)
             def set_S1_recovery(i):
                 S1.recovery = i
 
         elif target == 'Adsorbent Capacity (S1)':
             baseline = fs_unit.S1.capacity
             dist = distributions.Uniform(lower=0.002, upper=0.01)
-            @param(name='Adsorbent Capacity (S1)', element='S1', kind='coupled', units='mol/L adsorbent', baseline=baseline, distribution=dist)
+            @param(name='Adsorbent capacity (S1)', element='S1', kind='coupled', units='mol/L adsorbent', baseline=baseline, distribution=dist)
             def set_S1_capacity(i):
                 fs_unit.S1.capacity = i
 
@@ -258,7 +258,7 @@ def create_model(sys, fununit, parameter, target):
         # H2SO4 price
         baseline = fs_stream.lixiviant_acid.price
         dist = distributions.Triangle(lower=baseline*0.8, midpoint=baseline, upper=baseline*1.2)
-        @param(name='H2SO4 Price', element='TEA', kind='isolated', units='$/kg', baseline=baseline, distribution=dist)
+        @param(name='Sulfuric Acid Price', element='TEA', kind='isolated', units='$/kg', baseline=baseline, distribution=dist)
         def set_H2SO4_Price(i):
             fs_stream.lixiviant_acid.price = i
 
@@ -273,7 +273,7 @@ def create_model(sys, fununit, parameter, target):
         # NaOH price
         baseline = fs_stream.NaOH_feed.price
         dist = distributions.Triangle(lower=baseline*0.8, midpoint=baseline, upper=baseline*1.2)
-        @param(name='NaOH Price', element='TEA', kind='isolated', units='$/kg', baseline=baseline, distribution=dist)
+        @param(name='Sodium Hydroxide Price', element='TEA', kind='isolated', units='$/kg', baseline=baseline, distribution=dist)
         def set_NaOH_feed_Price(i):
             fs_stream.NaOH_feed.price = i
 
@@ -288,14 +288,14 @@ def create_model(sys, fununit, parameter, target):
         # Na3PO4 price
         baseline = fs_stream.Na3PO4_feed.price
         dist = distributions.Triangle(lower=baseline*0.8, midpoint=baseline, upper=baseline*1.2)
-        @param(name='Na3PO4 Price', element='TEA', kind='isolated', units='$/kg', baseline=baseline, distribution=dist)
+        @param(name='Na\u2083PO\u2084 Price', element='TEA', kind='isolated', units='$/kg', baseline=baseline, distribution=dist)
         def set_Na3PO4_feed_Price(i):
             fs_stream.Na3PO4_feed.price = i
 
         # HNO3 price
         baseline = fs_stream.HNO3_feed.price
         dist = distributions.Triangle(lower=baseline*0.8, midpoint=baseline, upper=baseline*1.2)
-        @param(name='HNO3 Price', element='TEA', kind='isolated', units='$/kg', baseline=baseline, distribution=dist)
+        @param(name='Nitric Acid Price', element='TEA', kind='isolated', units='$/kg', baseline=baseline, distribution=dist)
         def set_HNO3_feed_Price(i):
             fs_stream.HNO3_feed.price = i
 
@@ -313,10 +313,10 @@ def create_model(sys, fununit, parameter, target):
         def set_PowerUtility_price(i):
             qs.PowerUtility.price = i
 
-        # Peptide Price (S1)
+        # Biomolecule Price (S1)
         baseline = fs_unit.S1.peptide_price
-        dist = distributions.Triangle(lower=baseline*0.3, midpoint=baseline, upper=baseline*1.2) 
-        @param(name='Peptide Price', element='TEA', kind='isolated', units='$/g peptide', baseline=baseline, distribution=dist)
+        dist = distributions.Triangle(lower=0.004, midpoint=baseline, upper=10) 
+        @param(name='Biomolecule Price', element='TEA', kind='isolated', units='$/g', baseline=baseline, distribution=dist)
         def set_S1_peptide_price(i):
             fs_unit.S1.peptide_price = i
 

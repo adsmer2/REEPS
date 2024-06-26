@@ -10,7 +10,7 @@ import os
 from systems import create_system
 from model import *
 
-def analysis_indicator_trend(model, p_name, figures_path):
+def analysis_indicator_trend(model, fununit, p_name, figures_path):
     '''
     Create a line plot that shows the change in an indicator over the uncertainty range of a parameter
 
@@ -22,7 +22,6 @@ def analysis_indicator_trend(model, p_name, figures_path):
     '''
     # Indicator Trend Analysis
     # --------------------------
-    
     # Define parameter of interest
     ind_parameter = [i.name for i in model._parameters].index(p_name)
     p_units = model._parameters[ind_parameter].units
@@ -44,7 +43,7 @@ def analysis_indicator_trend(model, p_name, figures_path):
         bin_end = bin_center + bin_width/2
         bin_indices = np.logical_and(model.table.loc[:, (model._parameters[ind_parameter].element, f'{p_name} [{p_units}]')].values >= bin_start, 
                                     model.table.loc[:, (model._parameters[ind_parameter].element, f'{p_name} [{p_units}]')].values < bin_end)
-        bin_data = model.table.loc[:,('TEA', 'IRR [%]')].values[bin_indices]
+        bin_data = model.table.loc[:,('LCA', f'Ionising radiation [kBq Co-60-Eq/kg {fununit}]')].values[bin_indices]
         mean_output_parameter_binned.append(np.mean(bin_data))
         std_output_parameter_binned.append(np.std(bin_data))
 
@@ -58,7 +57,7 @@ def analysis_indicator_trend(model, p_name, figures_path):
     ax.plot(smooth_x_values, mean_interpolator, color='#60c1cf', label='Mean IRR')
     ax.fill_between(smooth_x_values, mean_interpolator - 2*std_interpolator, mean_interpolator + 2*std_interpolator, color='#60c1cf', alpha=0.3, label='Confidence Interval (95%)')
     # Add labels and title
-    ax.set(xlabel=f'{p_name} ({p_units})', ylabel='IRR (fraction)', xlim=(lower,upper), ylim=(0,0.4))
+    ax.set(xlabel=f'{p_name} ({p_units})', ylabel='IRR (fraction)') # , xlim=(lower,upper), ylim=(0,0.4)
     # Show the legend
     ax.legend(loc='upper left')
     # Save the plot

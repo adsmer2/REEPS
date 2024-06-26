@@ -11,7 +11,7 @@ class black_box(qs.SanUnit):
     # recovery = 1, # recovery of lanthanides (% as decimal). Target Value
     immobilization_density = 2.47, # mmol/L adsorbent bed. From ACS Cent. Sci. 2021, 7, 1798−1808
     cycle_time = 4, # hrs. The time it takes for one column to stop, start, and desorb REEs.
-    peptide_price = 8.03, # $/g peptide. Extrapolated from quoted prices at small amounts of peptide using power law model. Reasonable by Bray - 2003 - large-scale manufacture of peptide
+    peptide_price = 0.5, # $/g biomolecule. from multiple sources of protein and peptide data
     resin_price = 45, # $/L adsorbent resin. From https://samcotech.com/how-much-does-it-cost-to-buy-maintain-and-dispose-of-ion-exchange-resins/
     membrane_lifetime = 10, # years. How long before the membrane must be replaced?
     pressure = 101325*5 # Pa. Pressure drop through membrane system. Taken as the high end of ultrafiltration in Richard D. Noble (1987) An Overview of Membrane Separations, Separation Science and Technology, 22:2-3, 731-743
@@ -33,7 +33,7 @@ class black_box(qs.SanUnit):
 
     def _run(self):
         # This unit is assumed to make ~99.99% or greater purity individual REE streams
-        # Regeneration isn't considered here since experimental data is lacking for membrane adsorption systems for this application
+        # Regeneration isn't considered here since experimental data is lacking for adsorption systems for this application
         # Define outlet stream flowrates
         self.outs[0].imass['Nd'] = self.ins[0].imass['Nd']*self.recovery
         self.outs[0].imass['H2O'] = self.ins[0].imass['H2O']
@@ -57,19 +57,19 @@ class black_box(qs.SanUnit):
         
         # Estimate Capital/Operating Cost
         # -----------------------
-        # Calculate membrane cost based on ion exchange resin data
+        # Calculate adsorbent cost based on ion exchange resin data
         Ln_in = self.ins[0].imol['Nd']*1000 # mol/hr
         resin_needed = Ln_in/self.capacity*self.cycle_time *2 # L adsorbent resin. Need two adsorption columns to allow for regeneration of the other column
-        MW_peptide = 1386 # g/mol molecular weight of the LanM EF-hand 1 peptide
+        MW_peptide = 11800 # g/mol molecular weight of the LanM protein
         peptide_needed = resin_needed*self.immobilization_density/1000*MW_peptide # g peptide
         resin_cost = resin_needed*self.resin_price # $
         peptide_cost = peptide_needed*self.peptide_price # $ 
 
-        self.membrane_cost = resin_cost + peptide_cost # cost of the first membrane purchase (capital cost)
+        self.membrane_cost = resin_cost + peptide_cost # cost of the first adsorbent purchase (capital cost)
 
         plant_lifetime = 30 # years
-        replacements = (plant_lifetime - self.membrane_lifetime)/self.membrane_lifetime # years of plant life remaining after first membrane needs replacement/membrane lifetime. The number of times new membrane needs to be bought after the initial purchase
-        self.annual_membrane_cost = self.membrane_cost*replacements/plant_lifetime # operating cost of membrane replacement annualized over the plant lifetime
+        replacements = (plant_lifetime - self.membrane_lifetime)/self.membrane_lifetime # years of plant life remaining after first adsorbent needs replacement/adsorbent lifetime. The number of times new adsorbent needs to be bought after the initial purchase
+        self.annual_membrane_cost = self.membrane_cost*replacements/plant_lifetime # operating cost of adsorbent replacement annualized over the plant lifetime
         
         D['Flow Rate'] = self.ins[0].F_vol
         D['Ln Flow In'] = self.ins[0].imol['Nd']*1000
@@ -86,4 +86,4 @@ class black_box(qs.SanUnit):
         self.baseline_purchase_costs['black box'] = 0 # The capital cost here is made zero to avoid using the Lang factor for this piece of equipment. The membrane_cost is added when calling my_TEA in systems.py (adding directly to TDC)
     
         # OPEX (membrane replacements)
-        self.add_OPEX = {'Peptide Membrane Replacements': self.annual_membrane_cost/8760} # cost of replacing membranes ($/hr)
+        self.add_OPEX = {'Peptide Membrane Replacements': self.annual_membrane_cost/8760} # cost of replacing adsorbent ($/hr)

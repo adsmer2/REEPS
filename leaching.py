@@ -129,7 +129,8 @@ class LeachingSulfuric(qs.SanUnit):
         underflow.imass['H2O'] = (1-fracSulfuric)*L_L # kg/hr. Process water leaving teh leaching unit in the underflow 
         underflow.imass['Gypsum'] = self.ins[0].imass['Gypsum']*0.7 # kg/hr. Read leachate solids comment
         underflow.imass['U'] = self.ins[0].imass['U']*0.3 # kg/hr. See above comment for leachate
-
+        
+ 
 
     _units = {
         'Washing Stages': '#',
